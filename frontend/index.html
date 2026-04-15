@@ -1255,20 +1255,58 @@ function fillLogin(email,pass,role){
   document.getElementById('lRole').value=role;
 }
 function doLogin(){
-  var role = document.getElementById('lRole').value;
-  var name = {administrator:'Administrator',super_admin:'Super Admin',admin:'Admin User',general:'General User',view_only:'Viewer'}[role];
-  S.user = {name, role, email: document.getElementById('lEmail').value};
+  var email = document.getElementById('lEmail').value;
+  var pass  = document.getElementById('lPass').value;
+  var role  = document.getElementById('lRole').value;
+  if(!email || !pass){ toast('Email and password required','wrn'); return; }
+  var nameMap = {administrator:'Administrator',super_admin:'Super Admin',admin:'Admin User',general:'General User',view_only:'Viewer'};
+  S.user = {name: nameMap[role]||role, role: role, email: email};
   S.role = role;
   document.getElementById('loginPage').style.display='none';
   document.getElementById('app').style.display='flex';
   buildNav();
   updateUserUI();
   renderWelcome();
+  // Try API login in background (non-blocking)
+  _tryApiLogin(email, pass, role);
+}
+
+async function _tryApiLogin(email, pass, role) {
+  try {
+    var res = await fetch(API_BASE + '/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({email: email, password: pass})
+    });
+    if(res.ok) {
+      var data = await res.json();
+      if(data.access_token) {
+        API_TOKEN = data.access_token;
+        API.token = data.access_token;
+        localStorage.setItem('erp_token', data.access_token);
+        if(data.user) {
+          S.user.name = data.user.full_name || S.user.name;
+          S.user.id   = data.user.id;
+          updateUserUI();
+        }
+        toast('Connected to server ✓', 'ok');
+        setTimeout(loadCache, 500);
+      }
+    }
+  } catch(e) {
+    // Offline/demo mode - continue without API
+    console.log('Running in demo mode (no API connection)');
+  }
 }
 function doLogout(){
+  API_TOKEN = null;
+  API.token = null;
+  localStorage.removeItem('erp_token');
   document.getElementById('app').style.display='none';
   document.getElementById('loginPage').style.display='flex';
   S.user=null;
+  // Call API logout if connected
+  try { fetch(API_BASE+'/auth/logout', {method:'POST', headers:{Authorization:'Bearer '+localStorage.getItem('erp_token')||''}}).catch(()=>{}); } catch(e){}
 }
 
 // ══════════════════════════════════════════════════════
@@ -1689,9 +1727,13 @@ function showModuleById(mcId, scId, itemId){
 // ═══════════════════════════════════════════════════════════════
 
 // ── API CONFIG ───────────────────────────────────────────────
+// API Base URL - change this to your production URL
+var API_BASE = localStorage.getItem('erp_api_base') || 'https://api.saforatech.com/api';
+var API_TOKEN = localStorage.getItem('erp_token') || null;
+
 var API = {
-  base: localStorage.getItem('erp_api_base') || 'https://api.saforatech.com/api',
-  token: localStorage.getItem('erp_token') || null,
+  base: API_BASE,
+  token: API_TOKEN,
   async req(method, path, data) {
     var headers = { 'Content-Type': 'application/json' };
     if (this.token) headers['Authorization'] = 'Bearer ' + this.token;
@@ -1938,12 +1980,9 @@ function performSearch() {
   toast('Found '+results.length+' results','ok');
 }
 
-// Override doLogin to load cache
-var _baseLogin = doLogin;
-function doLogin() {
-  _baseLogin();
-  setTimeout(loadCache, 800);
-}
+// Load cache after login (called from original doLogin)
+// NOTE: doLogin override removed - was causing infinite recursion
+// loadCache is called directly inside the original doLogin
 
 
 
