@@ -1690,7 +1690,7 @@ function showModuleById(mcId, scId, itemId){
 
 // ── API CONFIG ───────────────────────────────────────────────
 var API = {
-  base: localStorage.getItem('erp_api_base') || 'http://localhost:8000/api',
+  base: localStorage.getItem('erp_api_base') || 'https://api.saforatech.com/api',
   token: localStorage.getItem('erp_token') || null,
   async req(method, path, data) {
     var headers = { 'Content-Type': 'application/json' };
