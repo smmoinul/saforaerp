@@ -97,11 +97,6 @@ async def login(email: str = Body(...), password: str = Body(...)):
                  "role": p.get("role"), "company": p.get("companies"), "branch": p.get("branches")}
     }
 
-@app.get("/")
-def root():
-    return {"message": "SaforaERP API is running "}
-
-
 @app.get("/api/auth/me")
 async def me(u = Depends(get_current_user)):
     db = get_db()
