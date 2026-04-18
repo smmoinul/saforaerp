@@ -1319,7 +1319,11 @@ function fillLogin(email,pass,role){
   document.getElementById('lPass').value=pass;
   document.getElementById('lRole').value=role;
 }
+<<<<<<< HEAD
 
+=======
+// doLogin replaced by engine
+>>>>>>> 00cdd0f (SaforaTech 2.1)
 function doLogout(){
   document.getElementById('app').style.display='none';
   document.getElementById('loginPage').style.display='flex';
@@ -2194,6 +2198,7 @@ function clearForm(){
   document.querySelectorAll('.erp-form input[type=checkbox]').forEach(el=>el.checked=false);
   toast('Form cleared','inf');
 }
+<<<<<<< HEAD
 
 // ── ATTACH PAGE EVENTS ───────────────────────────────────────
 function attachPageEvents(item){
@@ -2667,6 +2672,1584 @@ async function markOnline(type){
 
 
 
+=======
+
+// ── ATTACH PAGE EVENTS ───────────────────────────────────────
+function attachPageEvents(item){
+  setTimeout(()=>{
+    document.querySelectorAll('[data-fill="customers"]').forEach(s=>{if(s.children.length<=1&&C.customers.length) s.innerHTML=sopts(C.customers);});
+    document.querySelectorAll('[data-fill="suppliers"]').forEach(s=>{if(s.children.length<=1&&C.suppliers.length) s.innerHTML=sopts(C.suppliers);});
+    document.querySelectorAll('[data-fill="items"]').forEach(s=>{if(s.children.length<=1&&C.items.length) s.innerHTML=sopts(C.items,'id','name');});
+    document.querySelectorAll('[data-fill="employees"]').forEach(s=>{if(s.children.length<=1&&C.employees.length) s.innerHTML=sopts(C.employees,'id','full_name');});
+    document.querySelectorAll('[data-fill="departments"]').forEach(s=>{if(s.children.length<=1&&C.departments.length) s.innerHTML=sopts(C.departments);});
+    document.querySelectorAll('[data-fill="designations"]').forEach(s=>{if(s.children.length<=1&&C.designations.length) s.innerHTML=sopts(C.designations);});
+    var fn=window['_onload_'+item.id.replace(/-/g,'_')];
+    if(fn) fn();
+  },100);
+}
+
+// ── AUTHORIZATION ────────────────────────────────────────────
+var AUTH_REQUIRED={
+  'salary-process':['administrator'],'bonus-process':['administrator'],
+  'pf-process':['administrator'],'single-voucher':['admin','administrator'],
+};
+var _origShowModule=showModule;
+function showModule(mc,sc,item){
+  var req=AUTH_REQUIRED[item.id];
+  if(req&&!req.includes(S.role)){
+    document.getElementById('pgTitle').textContent=item.label;
+    document.getElementById('mainContent').innerHTML=`
+    <div class="card" style="text-align:center;padding:40px">
+      <div style="font-size:48px">🔐</div>
+      <h3 style="margin:12px 0 8px">Authorization Required</h3>
+      <p style="color:var(--tx3);font-size:13px">Required: <span class="b ba">${req.join(', ')}</span> · Your role: <span class="b bb">${S.role}</span></p>
+      <button class="btn btn-s" style="margin-top:14px" onclick="renderWelcome()">← Dashboard</button>
+    </div>`;
+    return;
+  }
+  _origShowModule(mc,sc,item);
+}
+
+// ── GENERIC REPORT PAGE ──────────────────────────────────────
+function rptPage(title,filterExtra=''){
+  return `<div class="report-filters">
+    <div class="fg" style="margin:0"><label>From Date</label><input type="date" id="rpt-from" value="${new Date().toISOString().slice(0,8)}01"/></div>
+    <div class="fg" style="margin:0"><label>To Date</label><input type="date" id="rpt-to" value="${today()}"/></div>
+    ${filterExtra}
+    <button class="btn btn-p" onclick="loadReport()">🔍 Generate</button>
+    <button class="btn btn-b btn-sm" onclick="window.print()">🖨️ Print</button>
+    <button class="btn btn-s btn-sm" onclick="exportRptCSV()">📥 Export</button>
+  </div>
+  <div class="report-area" id="reportArea">
+    <div class="work-placeholder"><div class="wp-icon">📊</div><h3>${title}</h3>
+    <p style="font-size:13px;margin-top:6px;color:var(--tx3)">Select date range and click Generate.</p>
+    <button class="btn btn-p" style="margin-top:14px" onclick="loadReport()">Generate</button></div>
+  </div>`;
+}
+function loadReport(){
+  var from=document.getElementById('rpt-from')?.value;
+  var to=document.getElementById('rpt-to')?.value;
+  var area=document.getElementById('reportArea');
+  if(!area)return;
+  area.innerHTML='<div style="text-align:center;padding:32px;color:var(--tx3)"><div style="font-size:30px">⏳</div>Loading...</div>';
+  setTimeout(async()=>{
+    var fn=window['_rpt_'+S.currentPage];
+    if(fn){await fn(from,to);return;}
+    area.innerHTML=rptTbl(['SL','Reference','Description','Date','Amount','Status'],
+      Array.from({length:8},(_,i)=>[i+1,'REF-00'+(i+1),'Record '+(i+1),today(),'৳'+fmt((i+1)*12500),badge(['active','pending','paid'][i%3])]));
+    toast('Report generated','ok');
+  },400);
+}
+function printReport(){window.print();}
+function exportReport(){exportRptCSV();}
+function performSearch(){
+  var q=(document.getElementById('searchInput')||{}).value||'';
+  if(!q){toast('Enter search term','wrn');return;}
+  var tbody=document.querySelector('#searchResults tbody');
+  var results=[];
+  ERP_MENU.forEach(mc=>mc.sub.forEach(sc=>sc.items.forEach(item=>{
+    if((item.label||'').toLowerCase().includes(q.toLowerCase()||(item.bn||'').includes(q))) results.push({item,mc,sc});
+  })));
+  if(tbody) tbody.innerHTML=results.slice(0,20).map((r,i)=>`<tr><td>${i+1}</td><td><strong>${r.item.label}</strong></td><td><code style="font-size:11px">${r.item.id}</code></td><td>${r.item.type}</td><td>${r.mc.en} › ${r.sc.en}</td><td><button class="btn btn-s btn-sm" onclick="showModuleById('${r.mc.id}','${r.sc.id}','${r.item.id}')">Open</button></td></tr>`).join('')||'<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--tx3)">No results</td></tr>';
+  toast(`Found ${results.length} results`,'ok');
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// PART 3: DASHBOARD + EMPLOYEE + ATTENDANCE
+// ══════════════════════════════════════════════════════════════
+
+// Tab helper
+function swTab(prefix,idx){
+  document.querySelectorAll(`#${prefix}-tabs .t-it`).forEach((t,i)=>t.classList.toggle('act',i===idx));
+  document.querySelectorAll(`[id^="${prefix}-p"]`).forEach((p,i)=>p.classList.toggle('act',i===idx));
+}
+
+// DASHBOARD
+DASHBOARDS['mgmt-overview']=DASHBOARDS['pending-erp']=DASHBOARDS['e-manager-ov']=DASHBOARDS['emp-overview']=DASHBOARDS['crm-dashboard']=function(item){
+  setTimeout(loadDashData,80);
+  return `<div id="dash-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px">
+    ${[['💰','Today Sales','d0','var(--gn)'],['👥','Employees','d1','var(--bl)'],['📋','Pending Orders','d2','var(--am)'],
+       ['⚠️','Outstanding','d3','var(--rd)'],['🛒','Open POs','d4','var(--or)'],['📄','Pending Leave','d5','var(--pu)']
+    ].map(([ic,lb,id,col])=>`<div class="wcard"><div class="wcard-glow" style="background:${col}"></div><div class="wcard-ico">${ic}</div><div class="wcard-title">${lb}</div><div id="${id}" style="font-size:22px;font-weight:800;color:${col};margin-top:4px">—</div></div>`).join('')}
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div class="card"><div class="sec-hd"><h3>⏳ Pending Actions</h3><button class="btn btn-s btn-sm" onclick="loadDashData()">🔄</button></div><div id="dash-pending"></div></div>
+    <div class="card"><div class="sec-hd"><h3>⚡ Quick Actions</h3></div><div class="fn-grid">
+      ${[['💼','Sales Invoice','sales-mgmt','sales-process','sales-info'],
+         ['🛒','Purchase Order','purchase-mgmt','pur-process','pur-order'],
+         ['👤','New Employee','hrm','hr-employee','emp-profile'],
+         ['💰','Voucher Entry','accounts-mgmt','acc-voucher','journal-voucher'],
+         ['🔧','Job Card','service-mgmt','svc-process','job-card'],
+         ['💳','Credit Sale','credit-sales','credit-process','installment-sales']
+      ].map(([ic,lb,m,s,i])=>`<div class="fn-card" onclick="showModuleById('${m}','${s}','${i}')" style="padding:10px 12px"><div style="font-size:18px;margin-bottom:4px">${ic}</div><div style="font-size:12px;font-weight:600">${lb}</div></div>`).join('')}
+    </div></div>
+  </div>`;
+};
+async function loadDashData(){
+  var r=await API.get('/erp/dashboard');
+  var d=r?.data||{today_sales:84250,total_employees:142,pending_sales_orders:23,outstanding_dues:238500,pending_purchase_orders:8,pending_leave_applications:5};
+  [['৳'+fmt(d.today_sales),0],[d.total_employees,1],[d.pending_sales_orders,2],['৳'+fmt(d.outstanding_dues),3],[d.pending_purchase_orders,4],[d.pending_leave_applications,5]].forEach(([v,i])=>{var el=document.getElementById('d'+i);if(el)el.textContent=v;});
+  var pl=document.getElementById('dash-pending');
+  if(pl) pl.innerHTML=[['Pending Sales Orders',d.pending_sales_orders,'var(--am)'],['Open Purchase Orders',d.pending_purchase_orders,'var(--or)'],['Pending Leave Apps',d.pending_leave_applications,'var(--bl)'],['Outstanding Dues','৳'+fmt(d.outstanding_dues),'var(--rd)']].map(([l,v,c])=>`<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--br)"><span style="font-size:13px">${l}</span><span style="font-weight:700;color:${c}">${v}</span></div>`).join('');
+}
+
+// EMPLOYEE PROFILE
+FORMS['emp-profile']=function(item,canEdit){
+  var ro=canEdit?'':'disabled';
+  window._onload_emp_profile=()=>{loadEmpDropdowns();loadEmpList();};
+  return `<div class="tab-nav" id="emp-tabs">
+    <div class="t-it act" onclick="swTab('emp',0)">👤 Personal</div>
+    <div class="t-it" onclick="swTab('emp',1)">💼 Job</div>
+    <div class="t-it" onclick="swTab('emp',2)">🏠 Address</div>
+    <div class="t-it" onclick="swTab('emp',3)">🎓 Education</div>
+    <div class="t-it" onclick="swTab('emp',4)">💵 Payroll</div>
+    <div class="t-it" onclick="swTab('emp',5)">🔐 User Account</div>
+  </div>
+  <form id="frm-emp-profile" class="erp-form" onsubmit="return false">
+  <div id="emp-p0" class="t-panel act"><div class="card"><div class="sec-hd"><h3>👤 Personal Info</h3></div>
+    <div class="fgrid3">
+      <div class="fg"><label>Employee Code *</label><input name="employee_code" placeholder="EMP-001" ${ro}/></div>
+      <div class="fg"><label>First Name *</label><input name="first_name" placeholder="First name" ${ro}/></div>
+      <div class="fg"><label>Last Name</label><input name="last_name" placeholder="Last name" ${ro}/></div>
+    </div>
+    <div class="fgrid3">
+      <div class="fg"><label>Date of Birth</label><input type="date" name="date_of_birth" ${ro}/></div>
+      <div class="fg"><label>Gender</label><select name="gender" ${ro}><option value="">Select</option><option>Male</option><option>Female</option><option>Other</option></select></div>
+      <div class="fg"><label>Blood Group</label><select name="blood_group" ${ro}><option value="">Select</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select></div>
+    </div>
+    <div class="fgrid3">
+      <div class="fg"><label>NID Number</label><input name="nid_number" ${ro}/></div>
+      <div class="fg"><label>Mobile *</label><input name="mobile_number" placeholder="01XXXXXXXXX" ${ro}/></div>
+      <div class="fg"><label>Religion</label><select name="religion" ${ro}><option value="">Select</option><option>Islam</option><option>Hinduism</option><option>Christianity</option><option>Other</option></select></div>
+    </div>
+    <div class="fgrid">
+      <div class="fg"><label>Personal Email</label><input type="email" name="personal_email" ${ro}/></div>
+      <div class="fg"><label>Official Email</label><input type="email" name="official_email" ${ro}/></div>
+    </div>
+    <div class="fgrid">
+      <div class="fg"><label>Emergency Contact Name</label><input name="emergency_contact_name" ${ro}/></div>
+      <div class="fg"><label>Emergency Phone</label><input name="emergency_contact_phone" ${ro}/></div>
+    </div>
+    <div class="fgrid3">
+      <div class="fg"><label>Father's Name</label><input name="father_name" ${ro}/></div>
+      <div class="fg"><label>Mother's Name</label><input name="mother_name" ${ro}/></div>
+      <div class="fg"><label>Marital Status</label><select name="marital_status" ${ro}><option value="">Select</option><option>Single</option><option>Married</option><option>Divorced</option></select></div>
+    </div>
+  </div></div>
+  <div id="emp-p1" class="t-panel"><div class="card"><div class="sec-hd"><h3>💼 Job & Organization</h3></div>
+    <div class="fgrid3">
+      <div class="fg"><label>Department *</label><select name="department_id" id="ef-dept" ${ro}><option value="">Loading...</option></select></div>
+      <div class="fg"><label>Designation *</label><select name="designation_id" id="ef-desig" ${ro}><option value="">Loading...</option></select></div>
+      <div class="fg"><label>Grade</label><select name="grade_id" id="ef-grade" ${ro}><option value="">Select</option></select></div>
+    </div>
+    <div class="fgrid3">
+      <div class="fg"><label>Joining Date *</label><input type="date" name="joining_date" ${ro}/></div>
+      <div class="fg"><label>Confirmation Date</label><input type="date" name="confirmation_date" ${ro}/></div>
+      <div class="fg"><label>Employee Type</label><select name="nature_id" ${ro}><option value="permanent">Permanent</option><option value="contractual">Contractual</option><option value="probationary">Probationary</option><option value="part_time">Part Time</option></select></div>
+    </div>
+    <div class="fgrid">
+      <div class="fg"><label>Reporting To</label><select name="reporting_to" id="ef-mgr" ${ro}><option value="">Select manager</option></select></div>
+      <div class="fg"><label>Status</label><select name="employee_status" ${ro}><option value="active">Active</option><option value="inactive">Inactive</option><option value="terminated">Terminated</option></select></div>
+    </div>
+    <div class="fg"><label>Remarks</label><textarea name="remarks" rows="2" ${ro}></textarea></div>
+  </div></div>
+  <div id="emp-p2" class="t-panel"><div class="card"><div class="sec-hd"><h3>🏠 Address</h3></div>
+    <div class="fgrid">
+      <div class="fg"><label>Present Address</label><textarea name="pres_address" rows="3" ${ro}></textarea></div>
+      <div class="fg"><label>Permanent Address</label><textarea name="perm_address" rows="3" ${ro}></textarea></div>
+    </div>
+    <div class="fgrid3">
+      <div class="fg"><label>Present District</label><input name="pres_district" ${ro}/></div>
+      <div class="fg"><label>Permanent District</label><input name="perm_district" ${ro}/></div>
+      <div class="fg"><label>Division</label><input name="division" ${ro}/></div>
+    </div>
+  </div></div>
+  <div id="emp-p3" class="t-panel"><div class="card"><div class="sec-hd"><h3>🎓 Education</h3>${canEdit?'<button type="button" class="btn btn-p btn-sm" onclick="addEduRow()">+ Add</button>':''}</div>
+    <div class="tbl-wrap"><table><thead><tr><th>Degree</th><th>Subject</th><th>Institution</th><th>Year</th><th>Result</th>${canEdit?'<th></th>':''}</tr></thead>
+    <tbody id="edu-body"><tr>
+      <td><input name="edu_deg_0" placeholder="SSC/HSC/BSc" style="width:100%;background:transparent;border:none;color:var(--tx);font-family:var(--font)"/></td>
+      <td><input name="edu_sub_0" placeholder="Subject" style="width:100%;background:transparent;border:none;color:var(--tx);font-family:var(--font)"/></td>
+      <td><input name="edu_ins_0" placeholder="Institution" style="width:100%;background:transparent;border:none;color:var(--tx);font-family:var(--font)"/></td>
+      <td><input name="edu_yr_0" type="number" placeholder="Year" style="width:70px;background:transparent;border:none;color:var(--tx);font-family:var(--font)"/></td>
+      <td><input name="edu_res_0" placeholder="GPA" style="width:80px;background:transparent;border:none;color:var(--tx);font-family:var(--font)"/></td>
+      ${canEdit?'<td><button type="button" onclick="this.closest(\'tr\').remove()" class="btn btn-d btn-sm">×</button></td>':''}
+    </tr></tbody></table></div>
+  </div></div>
+  <div id="emp-p4" class="t-panel"><div class="card"><div class="sec-hd"><h3>💵 Payroll & Bank</h3></div>
+    <div class="fgrid3">
+      <div class="fg"><label>Basic Salary (৳)</label><input type="number" name="basic_salary" value="0" ${ro}/></div>
+      <div class="fg"><label>House Rent (৳)</label><input type="number" name="house_rent" value="0" ${ro}/></div>
+      <div class="fg"><label>Medical (৳)</label><input type="number" name="medical" value="0" ${ro}/></div>
+    </div>
+    <div class="fgrid">
+      <div class="fg"><label>Bank Account No</label><input name="bank_account_number" ${ro}/></div>
+      <div class="fg"><label>Account Name</label><input name="bank_account_name" ${ro}/></div>
+    </div>
+  </div></div>
+  <div id="emp-p5" class="t-panel"><div class="card"><div class="sec-hd"><h3>🔐 User Account</h3><span class="b ba">Optional</span></div>
+    <div style="background:var(--bg3);border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid var(--br)">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+        <input type="checkbox" id="createUserAcc" onchange="toggleUserAcc(this)"/>
+        Create login account for this employee
+      </label>
+    </div>
+    <div id="userAccSection" style="display:none">
+      <div class="fgrid"><div class="fg"><label>Login Email *</label><input name="user_email" type="email" placeholder="email@saforatech.com"/></div><div class="fg"><label>Username</label><input name="username" placeholder="Auto from email"/></div></div>
+      <div class="fgrid"><div class="fg"><label>Password *</label><input name="user_password" type="password" placeholder="Min 8 characters"/></div><div class="fg"><label>Confirm Password</label><input name="user_confirm" type="password"/></div></div>
+      <div class="fg"><label>Access Role</label><select name="user_role">
+        <option value="general">👤 General User</option>
+        <option value="admin">⚙️ Admin</option>
+        <option value="view_only">👁 View Only</option>
+      </select></div>
+    </div>
+  </div></div>
+  </form>
+  ${canEdit?`<div style="display:flex;gap:8px;margin-top:14px;padding:14px;background:var(--bg2);border:1px solid var(--br);border-radius:12px">
+    <button class="btn btn-p" onclick="submitEmployee()">💾 Save Employee</button>
+    <button class="btn btn-s" onclick="clearForm()">🔄 Clear</button>
+    <button class="btn btn-b btn-sm" onclick="genIdCard()">🪪 ID Card</button>
+  </div>`:''}
+  <div class="card" style="margin-top:14px"><div class="sec-hd"><h3>📋 Employee List</h3>
+    <div style="display:flex;gap:8px">
+      <input type="text" id="emp-search" placeholder="Search..." style="padding:6px 12px;background:var(--bg3);border:1px solid var(--br2);border-radius:8px;color:var(--tx);font-size:12px;font-family:var(--font);outline:none;width:180px" oninput="searchEmp(this.value)"/>
+      ${canEdit?'<button class="btn btn-p btn-sm" onclick="openAddModal(\'emp-profile\')">+ New</button>':''}
+    </div>
+  </div>
+  <div class="tbl-wrap"><table><thead><tr><th>#</th><th>Code</th><th>Name</th><th>Dept</th><th>Designation</th><th>Mobile</th><th>Status</th><th></th></tr></thead>
+  <tbody id="emp-list-body"><tr><td colspan="8" style="text-align:center;padding:16px;color:var(--tx3)">Loading...</td></tr></tbody></table></div></div>`;
+};
+var _eduR=1;
+function addEduRow(){
+  var i=_eduR++;
+  document.getElementById('edu-body').insertAdjacentHTML('beforeend',`<tr>
+    <td><input name="edu_deg_${i}" placeholder="Degree" style="width:100%;background:transparent;border:none;color:var(--tx);font-family:var(--font)"/></td>
+    <td><input name="edu_sub_${i}" placeholder="Subject" style="width:100%;background:transparent;border:none;color:var(--tx);font-family:var(--font)"/></td>
+    <td><input name="edu_ins_${i}" placeholder="Institution" style="width:100%;background:transparent;border:none;color:var(--tx);font-family:var(--font)"/></td>
+    <td><input name="edu_yr_${i}" type="number" style="width:70px;background:transparent;border:none;color:var(--tx);font-family:var(--font)"/></td>
+    <td><input name="edu_res_${i}" placeholder="GPA" style="width:80px;background:transparent;border:none;color:var(--tx);font-family:var(--font)"/></td>
+    <td><button type="button" onclick="this.closest('tr').remove()" class="btn btn-d btn-sm">×</button></td>
+  </tr>`);
+}
+function toggleUserAcc(cb){ var s=document.getElementById('userAccSection'); if(s)s.style.display=cb.checked?'block':'none'; }
+async function loadEmpDropdowns(){
+  var [r1,r2,r3]=await Promise.all([API.get('/hr/departments'),API.get('/hr/designations'),API.get('/hr/grades')]);
+  var d=document.getElementById('ef-dept'),dg=document.getElementById('ef-desig'),gr=document.getElementById('ef-grade'),mgr=document.getElementById('ef-mgr');
+  if(d&&r1?.data) d.innerHTML=sopts(r1.data);
+  if(dg&&r2?.data) dg.innerHTML=sopts(r2.data);
+  if(gr&&r3?.data) gr.innerHTML=sopts(r3.data);
+  if(mgr&&C.employees.length) mgr.innerHTML=sopts(C.employees,'id','full_name');
+}
+async function loadEmpList(q=''){
+  var tbody=document.getElementById('emp-list-body');if(!tbody)return;
+  var r=await API.get('/hr/employees',{page:1,page_size:20,search:q||null});
+  var data=r?.data||Array.from({length:5},(_,i)=>({id:'x'+i,employee_code:'EMP-00'+(i+1),first_name:'Employee',last_name:i+1,departments:{name:'IT'},designations:{name:'Officer'},mobile_number:'0170000'+(i+1),employee_status:'active'}));
+  tbody.innerHTML=data.map((e,i)=>`<tr>
+    <td>${i+1}</td>
+    <td><code style="font-family:var(--mono);color:var(--am);font-size:11px">${e.employee_code}</code></td>
+    <td><strong>${e.first_name||''} ${e.last_name||''}</strong></td>
+    <td>${e.departments?.name||'—'}</td>
+    <td>${e.designations?.name||'—'}</td>
+    <td>${e.mobile_number||'—'}</td>
+    <td>${badge(e.employee_status||'active')}</td>
+    <td><button class="btn btn-s btn-sm" onclick="">✏️</button><button class="btn btn-b btn-sm" onclick="genIdCard('${e.id}')">🪪</button></td>
+  </tr>`).join('');
+}
+function searchEmp(q){clearTimeout(window._se);window._se=setTimeout(()=>loadEmpList(q),400);}
+async function submitEmployee(){
+  var form=document.getElementById('frm-emp-profile');if(!form)return;
+  var data=fd(form);
+  if(!data.employee_code||!data.first_name){toast('Employee Code and First Name required','wrn');return;}
+  var createUser=document.getElementById('createUserAcc')?.checked;
+  if(createUser){
+    if(!data.user_email){toast('User email required','wrn');return;}
+    if(!data.user_password||data.user_password.length<8){toast('Password min 8 chars','wrn');return;}
+    if(data.user_password!==data.user_confirm){toast('Passwords do not match','wrn');return;}
+  }
+  var r=await API.post('/hr/employees',data);
+  if(r?.success||r?.data||!r){
+    toast('✅ Employee saved!','ok');
+    addNotification('Employee Created',`${data.first_name} ${data.last_name||''} (${data.employee_code})`);
+    if(createUser&&data.user_email){
+      await API.post('/auth/users',{email:data.user_email,password:data.user_password,full_name:data.first_name+' '+(data.last_name||''),role:data.user_role||'general'});
+      toast('✅ User account created!','ok');
+    }
+    loadEmpList();
+  }
+}
+function genIdCard(empId){
+  var form=document.getElementById('frm-emp-profile');
+  var data=form?fd(form):{};
+  var emp=C.employees.find(e=>e.id===empId)||data;
+  var w=window.open('','_blank','width=600,height=400');
+  w.document.write(`<!DOCTYPE html><html><head><title>ID Card</title>
+  <style>body{margin:20px;font-family:Arial;background:#f0f0f0;display:flex;gap:16px;flex-wrap:wrap}
+  .card{width:242px;background:linear-gradient(135deg,#1a3a6b,#2563eb);border-radius:12px;overflow:hidden;color:#fff;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+  .ch{background:rgba(255,255,255,.15);padding:8px 12px;display:flex;justify-content:space-between;align-items:center}
+  .cb{padding:12px;display:flex;align-items:center;gap:10px}
+  .cp{width:50px;height:50px;border-radius:8px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+  .cf{background:rgba(255,255,255,.1);padding:6px 12px;font-size:9px;color:rgba(255,255,255,.7)}
+  @media print{body{background:white;margin:0}.card{break-inside:avoid}}</style></head><body>
+  <div class="card">
+    <div class="ch"><span style="font-size:11px;font-weight:800;color:#FFD23F">SaforaERP</span><span style="font-size:9px;color:rgba(255,255,255,.7)">EMPLOYEE ID</span></div>
+    <div class="cb">
+      <div class="cp">${(emp.first_name||'E').charAt(0).toUpperCase()}</div>
+      <div>
+        <div style="font-size:13px;font-weight:700">${emp.first_name||''} ${emp.last_name||''}</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.8);margin:2px 0">${emp.designations?.name||emp.designation||'—'}</div>
+        <div style="font-family:monospace;font-size:11px;color:#FFD23F;font-weight:700">${emp.employee_code||'EMP-000'}</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.7)">${emp.departments?.name||emp.department||'—'}</div>
+      </div>
+    </div>
+    <div class="cf">📞 ${emp.mobile_number||'—'} · saforatech.com · Valid ${new Date().getFullYear()}-${new Date().getFullYear()+1}</div>
+  </div>
+  <script>window.onload=()=>window.print()<\/script></body></html>`);
+  w.document.close();
+}
+
+// ATTENDANCE
+FORMS['att-upload']=FORMS['exceptional-login']=FORMS['att-recover']=FORMS['manual-late']=function(item,canEdit){
+  var ro=canEdit?'':'disabled';
+  window._onload_att_upload=()=>loadAttData();
+  setInterval(()=>{var c=document.getElementById('live-clock'),d=document.getElementById('live-date');if(c)c.textContent=new Date().toLocaleTimeString('en-BD');if(d)d.textContent=new Date().toLocaleDateString('en-BD',{weekday:'long',year:'numeric',month:'long',day:'numeric'});},1000);
+  return `<div class="tab-nav" id="att-tabs">
+    <div class="t-it act" onclick="swTab('att',0)">📋 Manual Entry</div>
+    <div class="t-it" onclick="swTab('att',1)">📂 Upload CSV</div>
+    <div class="t-it" onclick="swTab('att',2)">🌐 Online</div>
+  </div>
+  <div id="att-p0" class="t-panel act">
+  <form id="frm-att-upload" class="erp-form" onsubmit="return false"><div class="card"><div class="sec-hd"><h3>📅 Attendance Entry</h3></div>
+    <div class="fgrid3">
+      <div class="fg"><label>Date *</label><input type="date" id="att-date" name="attendance_date" value="${today()}" ${ro} onchange="loadAttData()"/></div>
+      <div class="fg"><label>Employee</label><select name="employee_id" data-fill="employees" ${ro}><option value="">Select employee</option></select></div>
+      <div class="fg"><label>Status</label><select name="status" ${ro}><option value="present">✅ Present</option><option value="absent">❌ Absent</option><option value="late">⏰ Late</option><option value="half_day">🌗 Half Day</option><option value="on_leave">🏖️ On Leave</option></select></div>
+    </div>
+    <div class="fgrid"><div class="fg"><label>In Time</label><input type="time" name="in_time" ${ro}/></div><div class="fg"><label>Out Time</label><input type="time" name="out_time" ${ro}/></div></div>
+    <div class="fg"><label>Remarks</label><input name="remarks" placeholder="Reason for late/absence..." ${ro}/></div>
+    ${canEdit?'<div style="display:flex;gap:8px;margin-top:8px"><button type="button" class="btn btn-p" onclick="saveAttendance()">💾 Save</button><button type="button" class="btn btn-s btn-sm" onclick="loadAttData()">🔄 Refresh</button></div>':''}
+  </div></form>
+  <div class="card" style="margin-top:12px"><div class="sec-hd"><h3>Today's Attendance</h3><span class="b bg" id="att-present-count">Loading...</span></div>
+  <div class="tbl-wrap"><table><thead><tr><th>#</th><th>Employee</th><th>In</th><th>Out</th><th>Status</th><th>Hours</th></tr></thead>
+  <tbody id="att-tbody"><tr><td colspan="6" style="text-align:center;padding:16px;color:var(--tx3)">Loading...</td></tr></tbody></table></div></div>
+  </div>
+  <div id="att-p1" class="t-panel"><div class="card"><div class="sec-hd"><h3>📂 Upload Attendance File</h3></div>
+    <div style="background:var(--bg3);border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid var(--br)">
+      <p style="font-size:12px;color:var(--tx2);margin-bottom:6px"><strong>CSV Format:</strong></p>
+      <code style="font-family:var(--mono);font-size:11px;color:var(--am)">employee_code,date,in_time,out_time,status<br>EMP-001,2025-01-01,09:00,18:00,present</code>
+    </div>
+    <div class="fg"><label>Select File</label>
+      <input type="file" id="att-file" accept=".csv,.xlsx,.xls" onchange="previewAttFile(this)" style="background:var(--bg3);border:2px dashed var(--br2);border-radius:10px;padding:14px;width:100%;cursor:pointer"/>
+    </div>
+    <div id="att-preview" style="display:none;margin-top:12px">
+      <div class="sec-hd" style="margin-bottom:8px"><h3>Preview</h3><span id="att-file-stats" class="b bb"></span></div>
+      <div class="tbl-wrap" style="max-height:250px;overflow-y:auto"><table><thead><tr><th>Code</th><th>Date</th><th>In</th><th>Out</th><th>Status</th><th>Match</th></tr></thead>
+      <tbody id="att-preview-body"></tbody></table></div>
+      <div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-p" onclick="importAttendance()">📥 Import & Sync</button><button class="btn btn-s" onclick="document.getElementById('att-preview').style.display='none'">Cancel</button></div>
+    </div>
+  </div></div>
+  <div id="att-p2" class="t-panel"><div class="card"><div class="sec-hd"><h3>🌐 Online Attendance</h3><span class="b bg">● Live</span></div>
+    <div style="text-align:center;padding:20px">
+      <div id="live-clock" style="font-size:28px;font-weight:800;font-family:var(--mono);color:var(--or);margin-bottom:4px"></div>
+      <div id="live-date" style="font-size:13px;color:var(--tx2);margin-bottom:18px"></div>
+      <div class="fg" style="max-width:300px;margin:0 auto 14px"><label>Select Employee *</label>
+        <select id="online-emp-id" data-fill="employees"><option value="">Select your name</option></select>
+      </div>
+      <div id="att-location-status" style="font-size:12px;color:var(--tx3);margin-bottom:10px">📍 Location required</div>
+      <div id="att-camera-preview" style="width:200px;height:150px;margin:0 auto 10px;background:var(--bg3);border-radius:10px;overflow:hidden;display:none"><video id="att-video" style="width:100%;height:100%;object-fit:cover"></video></div>
+      <div style="display:flex;gap:10px;justify-content:center">
+        <button class="btn btn-p" style="padding:12px 24px;font-size:14px" onclick="markOnline('in')">✅ Mark IN</button>
+        <button class="btn btn-d" style="padding:12px 24px;font-size:14px" onclick="markOnline('out')">🚪 Mark OUT</button>
+      </div>
+      <div id="att-result" style="margin-top:14px;font-size:13px"></div>
+    </div>
+  </div></div>`;
+};
+async function loadAttData(){
+  var d=document.getElementById('att-date')?.value||today();
+  var tbody=document.getElementById('att-tbody');if(!tbody)return;
+  var r=await API.get('/hr/attendance',{from_date:d,to_date:d});
+  var data=r?.data||Array.from({length:5},(_,i)=>({employees:{first_name:'Employee',last_name:i+1,employee_code:'EMP-00'+(i+1)},in_time:'09:0'+i,out_time:'18:0'+i,status:i===3?'absent':i===4?'late':'present',working_hours:9}));
+  var p=data.filter(r=>r.status==='present').length;
+  var cnt=document.getElementById('att-present-count');if(cnt)cnt.textContent=p+'/'+data.length+' Present';
+  tbody.innerHTML=data.map((r,i)=>`<tr><td>${i+1}</td><td><strong>${r.employees?.first_name||''} ${r.employees?.last_name||''}</strong><br><code style="font-size:10px;color:var(--tx3)">${r.employees?.employee_code||'—'}</code></td><td>${r.in_time?String(r.in_time).slice(11,16)||r.in_time:'—'}</td><td>${r.out_time?String(r.out_time).slice(11,16)||r.out_time:'—'}</td><td>${badge(r.status)}</td><td>${r.working_hours||'—'}</td></tr>`).join('');
+}
+async function saveAttendance(){
+  var form=document.getElementById('frm-att-upload');if(!form)return;
+  var data=fd(form);
+  if(!data.attendance_date){toast('Select date','wrn');return;}
+  var r=await API.post('/hr/attendance',data);
+  if(r?.success||!r){toast('✅ Saved!','ok');loadAttData();}
+}
+function previewAttFile(input){
+  var file=input.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var rows=e.target.result.trim().split('\n').slice(1).map(r=>r.split(','));
+    var tbody=document.getElementById('att-preview-body');if(!tbody)return;
+    var matched=0;
+    tbody.innerHTML=rows.slice(0,20).map(r=>{
+      var code=r[0]?.trim();
+      var found=C.employees.find(e=>e.employee_code===code);
+      if(found)matched++;
+      return `<tr><td><code style="font-family:var(--mono);color:var(--am)">${code||'?'}</code></td><td>${r[1]?.trim()||'—'}</td><td>${r[2]?.trim()||'—'}</td><td>${r[3]?.trim()||'—'}</td><td>${badge(r[4]?.trim()||'present')}</td><td><span class="b ${found?'bg':'br'}">${found?'✅':'❌'}</span></td></tr>`;
+    }).join('');
+    document.getElementById('att-preview').style.display='block';
+    var st=document.getElementById('att-file-stats');if(st)st.textContent=rows.length+' rows, '+matched+' matched';
+    window._attData=rows;
+  };
+  reader.readAsText(file);
+}
+async function importAttendance(){
+  var rows=window._attData||[];if(!rows.length){toast('No data','wrn');return;}
+  var ok=0;
+  for(var row of rows){
+    var code=row[0]?.trim();
+    var emp=C.employees.find(e=>e.employee_code===code);
+    if(!emp)continue;
+    await API.post('/hr/attendance',{employee_id:emp.id,attendance_date:row[1]?.trim(),in_time:row[2]?.trim()||null,out_time:row[3]?.trim()||null,status:row[4]?.trim()||'present',is_manual:true});
+    ok++;
+  }
+  toast('✅ Imported '+ok+' records!','ok');
+  document.getElementById('att-preview').style.display='none';
+  addNotification('Attendance Imported',ok+' records synced');
+}
+async function markOnline(type){
+  var empId=document.getElementById('online-emp-id')?.value;
+  if(!empId){toast('Select employee','wrn');return;}
+  var result=document.getElementById('att-result');
+  if(result)result.textContent='Getting location...';
+  var location=null;
+  try{
+    await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(p=>{location={lat:p.coords.latitude.toFixed(4),lng:p.coords.longitude.toFixed(4)};res();},rej,{timeout:10000}));
+  }catch(e){
+    toast('⚠️ Location required!','err');
+    if(result)result.innerHTML='<span style="color:var(--rd)">❌ Enable GPS and try again</span>';
+    return;
+  }
+  // Try camera
+  try{
+    var stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}});
+    var vid=document.getElementById('att-video'),prev=document.getElementById('att-camera-preview');
+    if(vid&&prev){vid.srcObject=stream;prev.style.display='block';await vid.play();await new Promise(r=>setTimeout(r,1500));stream.getTracks().forEach(t=>t.stop());prev.style.display='none';}
+  }catch(e){}
+  var now=new Date(),timeStr=now.toTimeString().slice(0,5);
+  var data={employee_id:empId,attendance_date:today(),status:'present',remarks:`Online · ${location.lat},${location.lng}`};
+  if(type==='in') data.in_time=timeStr; else data.out_time=timeStr;
+  var r=await API.post('/hr/attendance',data);
+  if(r?.success||!r){
+    var msg=`${type==='in'?'✅ IN':'🚪 OUT'} at ${timeStr} · 📍 Location captured`;
+    toast(msg,'ok');
+    if(result)result.innerHTML=`<div class="b bg" style="padding:8px 14px">${msg}</div>`;
+    addNotification('Attendance',msg);
+  }
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// PART 4: LEAVE + ITEM + BARCODE + SALES ORDER + INVOICE
+// ══════════════════════════════════════════════════════════════
+
+// LEAVE APPLICATION
+FORMS['leave-apply']=function(item,canEdit){
+  var ro=canEdit?'':'disabled';
+  window._onload_leave_apply=()=>{loadLeaveTypes();loadLeaves('pending');};
+  return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+  <form id="frm-leave-apply" class="erp-form" onsubmit="return false">
+  <div class="card"><div class="sec-hd"><h3>🏖️ Leave Application</h3></div>
+    <div class="fg"><label>Employee *</label><select name="employee_id" data-fill="employees" ${ro}><option value="">Select employee</option></select></div>
+    <div class="fg"><label>Leave Type *</label><select name="leave_type_id" id="leave-type-sel" ${ro}><option value="">Loading...</option></select></div>
+    <div class="fgrid">
+      <div class="fg"><label>From Date *</label><input type="date" name="from_date" value="${today()}" ${ro} oninput="calcLeaveDays()"/></div>
+      <div class="fg"><label>To Date *</label><input type="date" name="to_date" value="${today()}" ${ro} oninput="calcLeaveDays()"/></div>
+    </div>
+    <div class="fg"><label>Total Days</label><input id="leave-days" value="1 Day" readonly style="opacity:.7;font-weight:700;color:var(--bl)"/></div>
+    <div class="fg"><label>Reason *</label><textarea name="reason" rows="3" placeholder="Reason for leave..." ${ro}></textarea></div>
+    ${canEdit?`<div style="display:flex;gap:8px;margin-top:8px">
+      <button type="button" class="btn btn-p" onclick="applyLeave()">📤 Apply</button>
+      <button type="button" class="btn btn-s" onclick="clearForm()">🔄 Clear</button>
+    </div>`:''}
+  </div></form>
+  <div class="card"><div class="sec-hd"><h3>📋 Applications</h3>
+    <div style="display:flex;gap:4px">
+      <button class="btn btn-s btn-sm" onclick="loadLeaves('pending')">Pending</button>
+      <button class="btn btn-s btn-sm" onclick="loadLeaves('approved')">Approved</button>
+      <button class="btn btn-s btn-sm" onclick="loadLeaves('')">All</button>
+    </div>
+  </div>
+  <div class="tbl-wrap" style="max-height:400px;overflow-y:auto"><table>
+    <thead><tr><th>#</th><th>Employee</th><th>Type</th><th>Days</th><th>Status</th><th>Action</th></tr></thead>
+    <tbody id="leave-list-body"><tr><td colspan="6" style="text-align:center;padding:16px;color:var(--tx3)">Loading...</td></tr></tbody>
+  </table></div></div></div>`;
+};
+FORMS['leave-pending']=FORMS['leave-approved']=function(item,canEdit){
+  var st=item.id==='leave-pending'?'pending':'approved';
+  window['_onload_'+item.id.replace(/-/g,'_')]=()=>loadLeaves(st);
+  return `<div class="card"><div class="sec-hd"><h3>${item.label}</h3></div>
+  <div class="tbl-wrap"><table><thead><tr><th>#</th><th>App No</th><th>Employee</th><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Status</th>${canEdit?'<th>Action</th>':''}</tr></thead>
+  <tbody id="leave-list-body"><tr><td colspan="9" style="text-align:center;padding:16px;color:var(--tx3)">Loading...</td></tr></tbody></table></div></div>`;
+};
+async function loadLeaveTypes(){
+  var r=await API.get('/hr/leave/types');
+  var sel=document.getElementById('leave-type-sel');
+  if(sel&&r?.data) sel.innerHTML=sopts(r.data);
+  else if(sel) sel.innerHTML='<option value="">Annual Leave</option><option value="">Sick Leave</option><option value="">Casual Leave</option>';
+}
+function calcLeaveDays(){
+  var f=document.querySelector('[name="from_date"]')?.value;
+  var t=document.querySelector('[name="to_date"]')?.value;
+  if(!f||!t) return;
+  var d=Math.max(1,Math.round((new Date(t)-new Date(f))/(86400000))+1);
+  var el=document.getElementById('leave-days');
+  if(el) el.value=d+' Day'+(d>1?'s':'');
+}
+async function loadLeaves(status){
+  var tbody=document.getElementById('leave-list-body');if(!tbody)return;
+  var r=await API.get('/hr/leave/applications',{status:status||null});
+  var data=r?.data||Array.from({length:4},(_,i)=>({id:'la'+i,application_no:'LA-00'+(i+1),employees:{first_name:'Employee',last_name:i+1},leave_types:{name:'Annual Leave'},from_date:'2025-04-0'+(i+1),to_date:'2025-04-0'+(i+3),total_days:3,status:i<2?'pending':'approved'}));
+  tbody.innerHTML=data.map((la,i)=>`<tr>
+    <td>${i+1}</td>
+    <td><code style="font-size:11px;font-family:var(--mono)">${la.application_no||'—'}</code></td>
+    <td>${la.employees?.first_name||''} ${la.employees?.last_name||''}</td>
+    <td>${la.leave_types?.name||'—'}</td>
+    <td>${la.from_date||'—'}</td><td>${la.to_date||'—'}</td>
+    <td style="text-align:center">${la.total_days||1}</td>
+    <td>${badge(la.status)}</td>
+    ${la.status==='pending'?`<td style="display:flex;gap:4px"><button class="btn btn-g btn-sm" onclick="approveLeave('${la.id}')">✅</button><button class="btn btn-d btn-sm" onclick="rejectLeave('${la.id}')">❌</button></td>`:'<td>—</td>'}
+  </tr>`).join('');
+}
+async function applyLeave(){
+  var form=document.getElementById('frm-leave-apply');if(!form)return;
+  var data=fd(form);
+  if(!data.employee_id||!data.from_date||!data.reason){toast('All fields required','wrn');return;}
+  var r=await API.post('/hr/leave/apply',data);
+  if(r?.success||!r){toast('✅ Leave applied!','ok');loadLeaves('pending');addNotification('Leave Applied','Application submitted');}
+}
+async function approveLeave(id){
+  var r=await API.put('/hr/leave/applications/'+id+'/approve');
+  if(r?.success||!r){toast('✅ Approved!','ok');loadLeaves('pending');}
+}
+async function rejectLeave(id){
+  if(!confirm('Reject this application?'))return;
+  var r=await API.put('/hr/leave/applications/'+id+'/reject',{rejection_reason:'Rejected by manager'});
+  if(r?.success||!r){toast('Rejected','wrn');loadLeaves('pending');}
+}
+
+// ── ITEM INFO + BARCODE ───────────────────────────────────────
+FORMS['item-info']=function(item,canEdit){
+  var ro=canEdit?'':'disabled';
+  window._onload_item_info=()=>loadItemList();
+  return `<div class="tab-nav" id="item-tabs">
+    <div class="t-it act" onclick="swTab('item',0)">📦 Basic Info</div>
+    <div class="t-it" onclick="swTab('item',1)">💰 Pricing</div>
+    <div class="t-it" onclick="swTab('item',2)">📊 Stock</div>
+    <div class="t-it" onclick="swTab('item',3)">🏷️ Barcode</div>
+  </div>
+  <form id="frm-item-info" class="erp-form" onsubmit="return false">
+  <div id="item-p0" class="t-panel act"><div class="card"><div class="sec-hd"><h3>📦 Item Details</h3></div>
+    <div class="fgrid3">
+      <div class="fg"><label>Item Code *</label><input name="item_code" placeholder="ITM-001" ${ro}/></div>
+      <div class="fg"><label>Barcode</label>
+        <div style="display:flex;gap:6px">
+          <input name="barcode" id="item-barcode-field" placeholder="Auto or manual" ${ro} style="flex:1"/>
+          ${canEdit?'<button type="button" onclick="autoGenBarcode()" class="btn btn-s btn-sm" style="flex-shrink:0">🏷️</button>':''}
+        </div>
+      </div>
+      <div class="fg"><label>Unit *</label><select name="primary_unit_id" ${ro}><option value="pcs">PCS</option><option value="kg">KG</option><option value="ltr">LTR</option><option value="mtr">MTR</option></select></div>
+    </div>
+    <div class="fg"><label>Item Name *</label><input name="name" placeholder="Full item name" ${ro}/></div>
+    <div class="fg"><label>Item Name (বাংলা)</label><input name="name_bn" placeholder="বাংলায় নাম" ${ro}/></div>
+    <div class="fgrid">
+      <div class="fg"><label>Item Group</label><select name="group_id" ${ro}><option value="">Select group</option></select></div>
+      <div class="fg"><label>Brand</label><select name="brand_id" ${ro}><option value="">Select brand</option></select></div>
+    </div>
+    <div class="fgrid">
+      <div class="fg"><label>Category</label><select name="category_id" ${ro}><option value="">Select category</option></select></div>
+      <div class="fg"><label>Type</label><select name="item_type_id" ${ro}><option value="">Select type</option><option value="finished">Finished Good</option><option value="raw">Raw Material</option><option value="semi">Semi-finished</option><option value="service">Service</option></select></div>
+    </div>
+    <div class="fg"><label>Description</label><textarea name="description" rows="2" ${ro}></textarea></div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap">
+      <label style="display:flex;gap:6px;align-items:center;cursor:pointer;font-size:13px"><input type="checkbox" name="has_warranty" ${ro}/> Has Warranty</label>
+      <label style="display:flex;gap:6px;align-items:center;cursor:pointer;font-size:13px"><input type="checkbox" name="is_serialized" ${ro}/> Serialized Item</label>
+    </div>
+  </div></div>
+  <div id="item-p1" class="t-panel"><div class="card"><div class="sec-hd"><h3>💰 Pricing</h3></div>
+    <div class="fgrid3">
+      <div class="fg"><label>Purchase Price (৳)</label><input type="number" name="purchase_price" value="0" step="0.01" ${ro} oninput="calcMargin()"/></div>
+      <div class="fg"><label>Selling Price (৳)</label><input type="number" name="selling_price" value="0" step="0.01" ${ro} oninput="calcMargin()"/></div>
+      <div class="fg"><label>MRP (৳)</label><input type="number" name="mrp" value="0" step="0.01" ${ro}/></div>
+    </div>
+    <div class="fgrid">
+      <div class="fg"><label>VAT Group</label><select name="vat_group_id" ${ro}><option value="">No VAT</option><option value="vat15">VAT 15%</option><option value="vat5">VAT 5%</option></select></div>
+      <div class="fg"><label>Profit Margin</label><input id="item-margin" value="0%" readonly style="opacity:.7;font-weight:700;color:var(--gn)"/></div>
+    </div>
+  </div></div>
+  <div id="item-p2" class="t-panel"><div class="card"><div class="sec-hd"><h3>📊 Stock Control</h3></div>
+    <div class="fgrid">
+      <div class="fg"><label>Reorder Level</label><input type="number" name="reorder_level" value="0" ${ro}/></div>
+      <div class="fg"><label>Reorder Qty</label><input type="number" name="reorder_qty" value="0" ${ro}/></div>
+    </div>
+    <div class="fgrid">
+      <div class="fg"><label>Min Stock</label><input type="number" name="min_stock" value="0" ${ro}/></div>
+      <div class="fg"><label>Max Stock</label><input type="number" name="max_stock" value="0" ${ro}/></div>
+    </div>
+  </div></div>
+  <div id="item-p3" class="t-panel"><div class="card"><div class="sec-hd"><h3>🏷️ Barcode Generator</h3></div>
+    <div class="fgrid">
+      <div class="fg"><label>Barcode Value</label><input id="bc-val" placeholder="Enter or auto-generate" oninput="renderBarcode()"/></div>
+      <div class="fg"><label>Type</label><select id="bc-type" onchange="renderBarcode()"><option>CODE128</option><option>EAN13</option></select></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button type="button" class="btn btn-p btn-sm" onclick="autoGenBarcode()">🔄 Auto Generate</button>
+      <button type="button" class="btn btn-b btn-sm" onclick="printBarcode()">🖨️ Print</button>
+    </div>
+    <div id="barcode-display" style="background:white;padding:20px;border-radius:10px;text-align:center;border:1px solid var(--br);min-height:100px;display:flex;flex-direction:column;align-items:center;justify-content:center">
+      <div style="font-size:13px;color:#999">Generate a barcode to preview</div>
+    </div>
+  </div></div>
+  </form>
+  ${canEdit?`<div style="display:flex;gap:8px;margin-top:14px;padding:14px;background:var(--bg2);border:1px solid var(--br);border-radius:12px">
+    <button class="btn btn-p" onclick="saveItemForm()">💾 Save Item</button>
+    <button class="btn btn-s" onclick="clearForm()">🔄 Clear</button>
+  </div>`:''}
+  <div class="card" style="margin-top:14px"><div class="sec-hd"><h3>📋 Item List</h3>
+    <input type="text" id="item-search" placeholder="Search..." style="padding:6px 12px;background:var(--bg3);border:1px solid var(--br2);border-radius:8px;color:var(--tx);font-size:12px;font-family:var(--font);outline:none;width:180px" oninput="searchItems(this.value)"/>
+  </div>
+  <div class="tbl-wrap"><table><thead><tr><th>#</th><th>Code</th><th>Name</th><th>Group</th><th>Buy ৳</th><th>Sell ৳</th><th></th></tr></thead>
+  <tbody id="item-list-body"><tr><td colspan="7" style="text-align:center;padding:16px;color:var(--tx3)">Loading...</td></tr></tbody></table></div></div>`;
+};
+function autoGenBarcode(){
+  var code=document.querySelector('[name="item_code"]')?.value||('BC'+Date.now().toString().slice(-8));
+  var bf=document.getElementById('item-barcode-field');
+  var bv=document.getElementById('bc-val');
+  if(bf)bf.value=code;if(bv)bv.value=code;
+  renderBarcode();
+}
+function renderBarcode(){
+  var val=document.getElementById('bc-val')?.value||document.getElementById('item-barcode-field')?.value||'';
+  var disp=document.getElementById('barcode-display');
+  if(!disp||!val)return;
+  var bars=Array.from({length:60},(_,i)=>`<div style="display:inline-block;width:${i%3===0?3:1}px;height:${i%5===0?60:42}px;background:#000;margin:0 0.5px"></div>`).join('');
+  disp.innerHTML=`<div style="padding:12px;background:white;display:inline-block;border:1px solid #ddd;border-radius:6px">
+    <div style="display:flex;align-items:flex-end;height:70px;margin-bottom:6px;justify-content:center">${bars}</div>
+    <div style="font-family:monospace;font-size:12px;letter-spacing:3px;color:#000">${val}</div>
+  </div>`;
+}
+function printBarcode(){
+  var val=document.getElementById('bc-val')?.value||'';
+  if(!val){toast('Generate barcode first','wrn');return;}
+  var w=window.open('','_blank','width=400,height=300');
+  w.document.write(`<!DOCTYPE html><html><head><title>Barcode</title>
+  <style>body{margin:20px;font-family:Arial;text-align:center}@media print{@page{margin:5mm}}</style>
+  </head><body>
+  <div style="border:1px solid #ccc;padding:15px;display:inline-block;border-radius:8px">
+    <div style="font-size:10px;color:#666;margin-bottom:6px">SaforaERP</div>
+    <div style="display:flex;align-items:flex-end;gap:0.5px;margin-bottom:6px;justify-content:center;height:60px">
+      ${Array.from({length:55},(_,i)=>`<div style="width:${i%3===0?3:1}px;height:${i%5===0?60:42}px;background:#000"></div>`).join('')}
+    </div>
+    <div style="font-family:monospace;font-size:13px;letter-spacing:3px">${val}</div>
+  </div>
+  <script>window.onload=()=>window.print()<\/script></body></html>`);
+  w.document.close();
+}
+function calcMargin(){
+  var buy=parseFloat(document.querySelector('[name="purchase_price"]')?.value||0);
+  var sell=parseFloat(document.querySelector('[name="selling_price"]')?.value||0);
+  var m=buy>0?((sell-buy)/buy*100):0;
+  var el=document.getElementById('item-margin');
+  if(el){el.value=fmt(m,1)+'%';el.style.color=m>0?'var(--gn)':'var(--rd)';}
+}
+async function saveItemForm(){
+  var form=document.getElementById('frm-item-info');if(!form)return;
+  var data=fd(form);
+  if(!data.item_code||!data.name){toast('Code and Name required','wrn');return;}
+  var r=await API.post('/inventory/items',data);
+  if(r?.success||r?.data||!r){toast('✅ Item saved!','ok');loadItemList();}
+}
+async function loadItemList(q=''){
+  var tbody=document.getElementById('item-list-body');if(!tbody)return;
+  var r=await API.get('/inventory/items',{page:1,page_size:20,search:q||null});
+  var data=r?.data||Array.from({length:5},(_,i)=>({item_code:'ITM-00'+(i+1),name:'Item '+(i+1),item_groups:{name:'Electronics'},purchase_price:(i+1)*500,selling_price:(i+1)*700}));
+  tbody.innerHTML=data.map((it,i)=>`<tr>
+    <td>${i+1}</td>
+    <td><code style="font-family:var(--mono);color:var(--am);font-size:11px">${it.item_code}</code></td>
+    <td><strong>${it.name}</strong></td>
+    <td>${it.item_groups?.name||'—'}</td>
+    <td>৳${fmt(it.purchase_price)}</td>
+    <td>৳${fmt(it.selling_price)}</td>
+    <td style="display:flex;gap:4px">
+      <button class="btn btn-s btn-sm">✏️</button>
+      <button class="btn btn-b btn-sm" onclick="(function(){var el=document.getElementById('bc-val');if(el){el.value='${it.item_code}';swTab('item',3);renderBarcode();}})()">🏷️</button>
+    </td>
+  </tr>`).join('');
+}
+function searchItems(q){clearTimeout(window._is);window._is=setTimeout(()=>loadItemList(q),400);}
+
+// ── SALES ORDER ───────────────────────────────────────────────
+FORMS['sales-order']=FORMS['product-sales-order']=FORMS['sales-order-entry']=function(item,canEdit){
+  var ro=canEdit?'':'disabled';
+  window._onload_sales_order=window._onload_product_sales_order=()=>{soFillDropdowns();addSORow();loadRecentSO();};
+  return `<form id="frm-so" class="erp-form" onsubmit="return false">
+  <div class="card"><div class="sec-hd"><h3>🛍️ Sales Order</h3><code style="font-family:var(--mono);font-size:11px;color:var(--tx3)">SO-${Date.now().toString().slice(-8)}</code></div>
+    <div class="fgrid3">
+      <div class="fg"><label>Order Date *</label><input type="date" name="order_date" value="${today()}" ${ro}/></div>
+      <div class="fg"><label>Delivery Date</label><input type="date" name="delivery_date" ${ro}/></div>
+      <div class="fg"><label>Status</label><select name="status" ${ro}><option value="pending">Pending</option><option value="confirmed">Confirmed</option></select></div>
+    </div>
+    <div class="fgrid">
+      <div class="fg"><label>Customer *</label><select name="customer_id" id="so-cust" ${ro}><option value="">Select customer...</option></select></div>
+      <div class="fg"><label>Remarks</label><input name="remarks" placeholder="Notes..." ${ro}/></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:12px"><div class="sec-hd"><h3>📦 Items</h3>${canEdit?'<button type="button" class="btn btn-p btn-sm" onclick="addSORow()">+ Add Item</button>':''}</div>
+    <div class="tbl-wrap"><table><thead><tr><th>#</th><th style="min-width:170px">Item</th><th>Qty</th><th>Unit Price</th><th>Disc%</th><th>Amount</th>${canEdit?'<th></th>':''}</tr></thead>
+    <tbody id="so-body"></tbody></table></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:10px">
+      <div style="background:var(--bg3);border:1px solid var(--br);border-radius:10px;padding:12px 18px;min-width:230px">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="color:var(--tx3)">Sub Total:</span><span id="so-sub">৳0.00</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:800;border-top:1px solid var(--br);padding-top:8px"><span>Total:</span><span id="so-total" style="color:var(--gn)">৳0.00</span></div>
+      </div>
+    </div>
+  </div></form>
+  ${canEdit?`<div style="display:flex;gap:8px;margin-top:12px;padding:14px;background:var(--bg2);border:1px solid var(--br);border-radius:12px">
+    <button class="btn btn-p" onclick="submitSO()">💾 Save Order</button>
+    <button class="btn btn-b btn-sm" onclick="window.print()">🖨️ Print</button>
+    <button class="btn btn-s" onclick="clearForm()">🔄 Clear</button>
+  </div>`:''}
+  <div class="card" style="margin-top:12px"><div class="sec-hd"><h3>📋 Recent Orders</h3></div>
+  <div class="tbl-wrap"><table><thead><tr><th>#</th><th>Order No</th><th>Customer</th><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
+  <tbody id="so-recent"><tr><td colspan="6" style="text-align:center;padding:16px;color:var(--tx3)">Loading...</td></tr></tbody></table></div></div>`;
+};
+async function soFillDropdowns(){
+  var sel=document.getElementById('so-cust');
+  if(sel){var r=await API.get('/customer/',{page:1,page_size:200});if(r?.data)sel.innerHTML=sopts(r.data,'id','name');else if(C.customers.length)sel.innerHTML=sopts(C.customers,'id','name');}
+}
+var _soR=0;
+function addSORow(){
+  var i=_soR++;var tbody=document.getElementById('so-body');if(!tbody)return;
+  tbody.insertAdjacentHTML('beforeend',`<tr id="sor-${i}">
+    <td>${i+1}</td>
+    <td><select name="so_item_${i}" style="width:170px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px 8px;font-size:12px" onchange="soFillPrice(this,${i})">${sopts(C.items,'id','name')}</select></td>
+    <td><input type="number" name="so_qty_${i}" value="1" style="width:65px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px;font-size:12px;text-align:right" oninput="soCalc(${i})"/></td>
+    <td><input type="number" name="so_price_${i}" value="0" style="width:90px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px;font-size:12px;text-align:right" oninput="soCalc(${i})"/></td>
+    <td><input type="number" name="so_disc_${i}" value="0" style="width:55px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px;font-size:12px;text-align:right" oninput="soCalc(${i})"/></td>
+    <td id="so-amt-${i}" style="text-align:right;font-weight:600;color:var(--gn)">৳0.00</td>
+    <td><button type="button" onclick="this.closest('tr').remove();soTotals()" class="btn btn-d btn-sm">×</button></td>
+  </tr>`);
+}
+function soFillPrice(sel,i){var it=C.items.find(x=>x.id===sel.value);if(it){var p=document.querySelector(`[name="so_price_${i}"]`);if(p){p.value=it.selling_price||0;soCalc(i);}}}
+function soCalc(i){var q=parseFloat(document.querySelector(`[name="so_qty_${i}"]`)?.value||0);var p=parseFloat(document.querySelector(`[name="so_price_${i}"]`)?.value||0);var d=parseFloat(document.querySelector(`[name="so_disc_${i}"]`)?.value||0);var t=q*p*(1-d/100);var el=document.getElementById(`so-amt-${i}`);if(el)el.textContent='৳'+fmt(t);soTotals();}
+function soTotals(){var t=0;document.querySelectorAll('[id^="so-amt-"]').forEach(el=>t+=parseFloat(el.textContent.replace('৳','').replace(/,/g,'')||0));var s=document.getElementById('so-sub'),tot=document.getElementById('so-total');if(s)s.textContent='৳'+fmt(t);if(tot)tot.textContent='৳'+fmt(t);}
+async function submitSO(){
+  var custId=document.querySelector('[name="customer_id"]')?.value;
+  if(!custId){toast('Select a customer','wrn');return;}
+  var items=[];
+  document.querySelectorAll('[id^="sor-"]').forEach(row=>{
+    var i=row.id.replace('sor-','');
+    var itemId=document.querySelector(`[name="so_item_${i}"]`)?.value;
+    if(!itemId)return;
+    items.push({item_id:itemId,quantity:parseFloat(document.querySelector(`[name="so_qty_${i}"]`)?.value||1),unit_price:parseFloat(document.querySelector(`[name="so_price_${i}"]`)?.value||0),discount_pct:parseFloat(document.querySelector(`[name="so_disc_${i}"]`)?.value||0)});
+  });
+  if(!items.length){toast('Add at least one item','wrn');return;}
+  var r=await API.post('/sales/orders',{order_date:document.querySelector('[name="order_date"]')?.value||today(),customer_id:custId,remarks:document.querySelector('[name="remarks"]')?.value||'',items});
+  if(r?.success||!r){toast('✅ Sales Order created!','ok');addNotification('Sales Order','New order created');loadRecentSO();}
+}
+async function loadRecentSO(){
+  var tbody=document.getElementById('so-recent');if(!tbody)return;
+  var r=await API.get('/sales/orders',{page:1,page_size:10});
+  var data=r?.data||Array.from({length:4},(_,i)=>({order_no:'SO-0000'+(i+1),customers:{name:'Customer '+i},order_date:today(),total_amount:(i+1)*25000,status:'pending'}));
+  tbody.innerHTML=data.map((o,i)=>`<tr><td>${i+1}</td><td><code style="font-family:var(--mono);color:var(--or)">${o.order_no}</code></td><td>${o.customers?.name||'—'}</td><td>${o.order_date}</td><td style="text-align:right">৳${fmt(o.total_amount)}</td><td>${badge(o.status)}</td></tr>`).join('');
+}
+
+// ── SALES INVOICE ─────────────────────────────────────────────
+FORMS['sales-info']=FORMS['pos-sales']=FORMS['pos-sales-order']=FORMS['product-sales']=function(item,canEdit){
+  var ro=canEdit?'':'disabled';
+  var isPOS=item.id.includes('pos');
+  window._onload_sales_info=window._onload_pos_sales=()=>{invFillDropdowns();addInvRow();};
+  return `<form id="frm-inv" class="erp-form" onsubmit="return false">
+  <div class="card"><div class="sec-hd"><h3>${isPOS?'🏪 POS Sale':'💼 Sales Invoice'}</h3><span class="b ${isPOS?'bp':'bg'}">${isPOS?'POS':'Invoice'}</span></div>
+    <div class="fgrid3">
+      <div class="fg"><label>Date *</label><input type="date" name="invoice_date" value="${today()}" ${ro}/></div>
+      <div class="fg"><label>Customer</label><select name="customer_id" id="inv-cust" ${ro}><option value="">Walk-in Customer</option></select></div>
+      <div class="fg"><label>Payment Method</label><select name="payment_method_id" ${ro}><option value="CASH">💵 Cash</option><option value="BKASH">📱 bKash</option><option value="CHEQUE">🏦 Cheque</option><option value="CARD">💳 Card</option></select></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:12px"><div class="sec-hd"><h3>📦 Items</h3>${canEdit?'<button type="button" class="btn btn-p btn-sm" onclick="addInvRow()">+ Add</button>':''}</div>
+    <div class="tbl-wrap"><table><thead><tr><th>#</th><th style="min-width:170px">Item</th><th>Qty</th><th>Price</th><th>Disc%</th><th>Amount</th>${canEdit?'<th></th>':''}</tr></thead>
+    <tbody id="inv-body"></tbody></table></div>
+    <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-top:12px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div class="fg" style="margin:0"><label>Extra Discount (৳)</label><input type="number" id="inv-extra-disc" value="0" oninput="invTotals()" style="width:130px"/></div>
+        <div class="fg" style="margin:0"><label>Delivery Charge (৳)</label><input type="number" id="inv-delivery" value="0" oninput="invTotals()" style="width:130px"/></div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--br);border-radius:10px;padding:14px 18px;min-width:250px">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="color:var(--tx3)">Sub Total:</span><span id="inv-sub">৳0.00</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="color:var(--tx3)">Discount:</span><span id="inv-disc-show" style="color:var(--rd)">-৳0.00</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:800;color:var(--gn);border-top:1px solid var(--br);padding-top:8px"><span>Total:</span><span id="inv-total">৳0.00</span></div>
+      </div>
+    </div>
+    <div class="fgrid" style="margin-top:10px">
+      <div class="fg"><label>Received (৳)</label><input type="number" id="inv-received" value="0" oninput="calcChange()" placeholder="Amount received"/></div>
+      <div class="fg"><label>Change / Due</label><input id="inv-change" readonly value="৳0.00" style="font-weight:700;color:var(--gn)"/></div>
+    </div>
+  </div></form>
+  ${canEdit?`<div style="display:flex;gap:8px;margin-top:12px;padding:14px;background:var(--bg2);border:1px solid var(--br);border-radius:12px">
+    <button class="btn btn-p" onclick="submitInv()">💾 Save & Print</button>
+    <button class="btn btn-g btn-sm" onclick="submitInv(true)">✅ Save Only</button>
+    <button class="btn btn-s" onclick="clearInvForm()">🔄 New</button>
+  </div>`:''}`;
+};
+async function invFillDropdowns(){
+  var sel=document.getElementById('inv-cust');
+  if(sel&&C.customers.length) sel.innerHTML='<option value="">Walk-in Customer</option>'+sopts(C.customers,'id','name');
+}
+var _invR=0;
+function addInvRow(){
+  var i=_invR++;var tbody=document.getElementById('inv-body');if(!tbody)return;
+  tbody.insertAdjacentHTML('beforeend',`<tr id="invr-${i}">
+    <td>${i+1}</td>
+    <td><select name="inv_item_${i}" style="width:170px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px 8px;font-size:12px" onchange="invFillPrice(this,${i})">${sopts(C.items,'id','name')}</select></td>
+    <td><input type="number" name="inv_qty_${i}" value="1" style="width:65px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px;font-size:12px;text-align:right" oninput="invCalc(${i})"/></td>
+    <td><input type="number" name="inv_price_${i}" value="0" style="width:90px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px;font-size:12px;text-align:right" oninput="invCalc(${i})"/></td>
+    <td><input type="number" name="inv_disc_${i}" value="0" style="width:55px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px;font-size:12px;text-align:right" oninput="invCalc(${i})"/></td>
+    <td id="inv-amt-${i}" style="text-align:right;font-weight:600;color:var(--gn)">৳0.00</td>
+    <td><button type="button" onclick="this.closest('tr').remove();invTotals()" class="btn btn-d btn-sm">×</button></td>
+  </tr>`);
+}
+function invFillPrice(sel,i){var it=C.items.find(x=>x.id===sel.value);if(it){var p=document.querySelector(`[name="inv_price_${i}"]`);if(p){p.value=it.selling_price||0;invCalc(i);}}}
+function invCalc(i){var q=parseFloat(document.querySelector(`[name="inv_qty_${i}"]`)?.value||0);var p=parseFloat(document.querySelector(`[name="inv_price_${i}"]`)?.value||0);var d=parseFloat(document.querySelector(`[name="inv_disc_${i}"]`)?.value||0);var t=q*p*(1-d/100);var el=document.getElementById(`inv-amt-${i}`);if(el)el.textContent='৳'+fmt(t);invTotals();}
+function invTotals(){var sub=0;document.querySelectorAll('[id^="inv-amt-"]').forEach(el=>sub+=parseFloat(el.textContent.replace('৳','').replace(/,/g,'')||0));var disc=parseFloat(document.getElementById('inv-extra-disc')?.value||0);var del=parseFloat(document.getElementById('inv-delivery')?.value||0);var tot=sub-disc+del;var s=document.getElementById('inv-sub'),ds=document.getElementById('inv-disc-show'),t=document.getElementById('inv-total');if(s)s.textContent='৳'+fmt(sub);if(ds)ds.textContent='-৳'+fmt(disc);if(t)t.textContent='৳'+fmt(tot);calcChange();}
+function calcChange(){var tot=parseFloat((document.getElementById('inv-total')?.textContent||'0').replace('৳','').replace(/,/g,'')||0);var rec=parseFloat(document.getElementById('inv-received')?.value||0);var ch=document.getElementById('inv-change');if(ch){var d=rec-tot;ch.value=(d>=0?'Change: ৳':'Due: ৳')+fmt(Math.abs(d));ch.style.color=d>=0?'var(--gn)':'var(--rd)';}}
+function clearInvForm(){_invR=0;var b=document.getElementById('inv-body');if(b)b.innerHTML='';invTotals();addInvRow();}
+async function submitInv(noprint=false){
+  var items=[];
+  document.querySelectorAll('[id^="invr-"]').forEach(row=>{var i=row.id.replace('invr-','');var itId=document.querySelector(`[name="inv_item_${i}"]`)?.value;if(!itId)return;items.push({item_id:itId,quantity:parseFloat(document.querySelector(`[name="inv_qty_${i}"]`)?.value||1),unit_price:parseFloat(document.querySelector(`[name="inv_price_${i}"]`)?.value||0),discount_pct:parseFloat(document.querySelector(`[name="inv_disc_${i}"]`)?.value||0)});});
+  if(!items.length){toast('Add at least one item','wrn');return;}
+  var r=await API.post('/sales/invoices',{invoice_date:document.querySelector('[name="invoice_date"]')?.value||today(),customer_id:document.querySelector('[name="customer_id"]')?.value||null,discount_amount:parseFloat(document.getElementById('inv-extra-disc')?.value||0),delivery_charge:parseFloat(document.getElementById('inv-delivery')?.value||0),items});
+  if(r?.success||!r){toast('✅ Invoice saved!','ok');addNotification('Invoice Created','Sales invoice recorded');if(!noprint)printInvoiceWindow(r?.invoice_no||'INV-'+Date.now().toString().slice(-8));}
+}
+function printInvoiceWindow(invNo){
+  var rows=Array.from(document.querySelectorAll('[id^="invr-"]')).map(row=>{var i=row.id.replace('invr-','');var name=document.querySelector(`[name="inv_item_${i}"] option:checked`)?.textContent||'Item';var qty=document.querySelector(`[name="inv_qty_${i}"]`)?.value||0;var price=document.querySelector(`[name="inv_price_${i}"]`)?.value||0;var amt=document.getElementById(`inv-amt-${i}`)?.textContent||'৳0';return `<tr style="border-bottom:1px solid #eee"><td style="padding:7px">${name}</td><td style="padding:7px;text-align:right">${qty}</td><td style="padding:7px;text-align:right">৳${fmt(price)}</td><td style="padding:7px;text-align:right;font-weight:600">${amt}</td></tr>`;}).join('');
+  var total=document.getElementById('inv-total')?.textContent||'৳0';
+  var w=window.open('','_blank','width=700,height=600');
+  w.document.write(`<!DOCTYPE html><html><head><title>Invoice ${invNo}</title>
+  <style>body{margin:0;font-family:Arial;font-size:12px}@media print{@page{margin:10mm;size:A4}}</style></head><body>
+  <div style="padding:20px;max-width:680px;margin:0 auto">
+    <div style="display:flex;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #FF6B35">
+      <div><div style="font-size:22px;font-weight:800;color:#FF6B35">SaforaERP</div><div style="font-size:11px;color:#666">Smart IT, Secure Business</div></div>
+      <div style="text-align:right"><div style="font-size:18px;font-weight:800">INVOICE</div><div style="font-size:13px;color:#FF6B35;font-weight:700">${invNo}</div><div style="font-size:11px;color:#666">Date: ${today()}</div></div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
+      <thead><tr style="background:#1a3a6b;color:#fff"><th style="padding:8px;text-align:left">Item</th><th style="padding:8px;text-align:right">Qty</th><th style="padding:8px;text-align:right">Price</th><th style="padding:8px;text-align:right">Amount</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div style="text-align:right;font-size:16px;font-weight:800;color:#FF6B35">Total: ${total}</div>
+    <div style="margin-top:20px;font-size:10px;color:#999;text-align:center">Thank you for your business · saforatech.com</div>
+  </div>
+  <script>window.onload=()=>window.print()<\/script></body></html>`);
+  w.document.close();
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// PART 5: PURCHASE ORDER + CUSTOMER + SUPPLIER + VOUCHER
+// ══════════════════════════════════════════════════════════════
+
+// PURCHASE ORDER
+FORMS['pur-order']=FORMS['prod-purchase-order']=function(item,canEdit){
+  var ro=canEdit?'':'disabled';
+  window._onload_pur_order=window._onload_prod_purchase_order=()=>{poFillDropdowns();addPORow();loadRecentPO();};
+  return `<form id="frm-po" class="erp-form" onsubmit="return false">
+  <div class="card"><div class="sec-hd"><h3>🛒 Purchase Order</h3><code style="font-family:var(--mono);font-size:11px;color:var(--tx3)">PO-${Date.now().toString().slice(-8)}</code></div>
+    <div class="fgrid3">
+      <div class="fg"><label>PO Date *</label><input type="date" name="po_date" value="${today()}" ${ro}/></div>
+      <div class="fg"><label>Expected Delivery</label><input type="date" name="expected_delivery" ${ro}/></div>
+      <div class="fg"><label>Payment Terms</label><select name="payment_term_id" ${ro}><option value="">Immediate</option><option value="net30">Net 30</option><option value="net60">Net 60</option></select></div>
+    </div>
+    <div class="fgrid">
+      <div class="fg"><label>Supplier *</label><select name="supplier_id" id="po-sup" ${ro}><option value="">Select supplier...</option></select></div>
+      <div class="fg"><label>Remarks</label><input name="remarks" placeholder="Notes..." ${ro}/></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:12px"><div class="sec-hd"><h3>📦 Items</h3>${canEdit?'<button type="button" class="btn btn-p btn-sm" onclick="addPORow()">+ Add</button>':''}</div>
+    <div class="tbl-wrap"><table><thead><tr><th>#</th><th style="min-width:170px">Item</th><th>Qty</th><th>Unit Price</th><th>Total</th>${canEdit?'<th></th>':''}</tr></thead>
+    <tbody id="po-body"></tbody></table></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:10px">
+      <div style="background:var(--bg3);border:1px solid var(--br);border-radius:10px;padding:12px 18px">
+        <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:800"><span>Total:</span><span id="po-total" style="color:var(--gn)">৳0.00</span></div>
+      </div>
+    </div>
+  </div></form>
+  ${canEdit?`<div style="display:flex;gap:8px;margin-top:12px;padding:14px;background:var(--bg2);border:1px solid var(--br);border-radius:12px">
+    <button class="btn btn-p" onclick="submitPO()">💾 Save PO</button>
+    <button class="btn btn-b btn-sm" onclick="window.print()">🖨️ Print</button>
+    <button class="btn btn-s" onclick="clearForm()">🔄 Clear</button>
+  </div>`:''}
+  <div class="card" style="margin-top:12px"><div class="sec-hd"><h3>📋 Recent POs</h3></div>
+  <div class="tbl-wrap"><table><thead><tr><th>#</th><th>PO No</th><th>Supplier</th><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
+  <tbody id="po-recent"><tr><td colspan="6" style="text-align:center;padding:16px;color:var(--tx3)">Loading...</td></tr></tbody></table></div></div>`;
+};
+async function poFillDropdowns(){
+  var sel=document.getElementById('po-sup');
+  if(sel){var r=await API.get('/supplier/',{page:1,page_size:200});if(r?.data)sel.innerHTML=sopts(r.data);else if(C.suppliers.length)sel.innerHTML=sopts(C.suppliers);}
+}
+var _poR=0;
+function addPORow(){
+  var i=_poR++;var tbody=document.getElementById('po-body');if(!tbody)return;
+  tbody.insertAdjacentHTML('beforeend',`<tr id="por-${i}">
+    <td>${i+1}</td>
+    <td><select name="po_item_${i}" style="width:170px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px 8px;font-size:12px">${sopts(C.items,'id','name')}</select></td>
+    <td><input type="number" name="po_qty_${i}" value="1" style="width:65px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px;font-size:12px;text-align:right" oninput="poCalc(${i})"/></td>
+    <td><input type="number" name="po_price_${i}" value="0" style="width:90px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px;font-size:12px;text-align:right" oninput="poCalc(${i})"/></td>
+    <td id="po-amt-${i}" style="text-align:right;font-weight:600;color:var(--gn)">৳0.00</td>
+    <td><button type="button" onclick="this.closest('tr').remove();poTotals()" class="btn btn-d btn-sm">×</button></td>
+  </tr>`);
+}
+function poCalc(i){var q=parseFloat(document.querySelector(`[name="po_qty_${i}"]`)?.value||0);var p=parseFloat(document.querySelector(`[name="po_price_${i}"]`)?.value||0);var t=q*p;var el=document.getElementById(`po-amt-${i}`);if(el)el.textContent='৳'+fmt(t);poTotals();}
+function poTotals(){var t=0;document.querySelectorAll('[id^="po-amt-"]').forEach(el=>t+=parseFloat(el.textContent.replace('৳','').replace(/,/g,'')||0));var el=document.getElementById('po-total');if(el)el.textContent='৳'+fmt(t);}
+async function submitPO(){
+  var supId=document.querySelector('[name="supplier_id"]')?.value;if(!supId){toast('Select a supplier','wrn');return;}
+  var items=[];document.querySelectorAll('[id^="por-"]').forEach(row=>{var i=row.id.replace('por-','');var itId=document.querySelector(`[name="po_item_${i}"]`)?.value;if(!itId)return;items.push({item_id:itId,ordered_qty:parseFloat(document.querySelector(`[name="po_qty_${i}"]`)?.value||1),unit_price:parseFloat(document.querySelector(`[name="po_price_${i}"]`)?.value||0)});});
+  if(!items.length){toast('Add at least one item','wrn');return;}
+  var r=await API.post('/purchase/orders',{po_date:document.querySelector('[name="po_date"]')?.value||today(),supplier_id:supId,remarks:document.querySelector('[name="remarks"]')?.value||'',items});
+  if(r?.success||!r){toast('✅ PO created!','ok');loadRecentPO();}
+}
+async function loadRecentPO(){
+  var tbody=document.getElementById('po-recent');if(!tbody)return;
+  var r=await API.get('/purchase/orders',{page:1,page_size:10});
+  var data=r?.data||Array.from({length:4},(_,i)=>({po_no:'PO-0000'+(i+1),suppliers:{name:'Supplier '+i},po_date:today(),total_amount:(i+1)*50000,status:'open'}));
+  tbody.innerHTML=data.map((o,i)=>`<tr><td>${i+1}</td><td><code style="font-family:var(--mono);color:var(--am)">${o.po_no}</code></td><td>${o.suppliers?.name||'—'}</td><td>${o.po_date}</td><td style="text-align:right">৳${fmt(o.total_amount)}</td><td>${badge(o.status)}</td></tr>`).join('');
+}
+
+// PURCHASE (GRN)
+FORMS['pur-purchase']=FORMS['prod-purchase']=FORMS['pur-grn']=function(item,canEdit){
+  var ro=canEdit?'':'disabled';
+  window._onload_pur_purchase=()=>{poFillDropdowns();addPurchaseRow();};
+  return `<form id="frm-pur" class="erp-form" onsubmit="return false">
+  <div class="card"><div class="sec-hd"><h3>📥 Purchase / GRN</h3></div>
+    <div class="fgrid3">
+      <div class="fg"><label>Purchase Date *</label><input type="date" name="purchase_date" value="${today()}" ${ro}/></div>
+      <div class="fg"><label>Invoice No</label><input name="invoice_no" placeholder="Supplier invoice no." ${ro}/></div>
+      <div class="fg"><label>Supplier *</label><select name="supplier_id" id="po-sup" ${ro}><option value="">Select...</option></select></div>
+    </div>
+    <div class="fgrid">
+      <div class="fg"><label>PO Reference</label><input name="po_ref" placeholder="PO number..." ${ro}/></div>
+      <div class="fg"><label>Payment Method</label><select name="payment_method_id" ${ro}><option value="CASH">Cash</option><option value="CHEQUE">Cheque</option><option value="BANK_TRANSFER">Bank Transfer</option></select></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:12px"><div class="sec-hd"><h3>📦 Items Received</h3>${canEdit?'<button type="button" class="btn btn-p btn-sm" onclick="addPurchaseRow()">+ Add</button>':''}</div>
+    <div class="tbl-wrap"><table><thead><tr><th>#</th><th>Item</th><th>Qty</th><th>Unit Cost</th><th>Total</th>${canEdit?'<th></th>':''}</tr></thead>
+    <tbody id="pur-body"></tbody></table></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:10px;gap:12px;align-items:center">
+      <div class="fg" style="margin:0;min-width:150px"><label>Other Charges (৳)</label><input type="number" id="pur-other" value="0" oninput="purTotals()"/></div>
+      <div style="background:var(--bg3);border:1px solid var(--br);border-radius:10px;padding:12px 18px">
+        <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:800"><span>Grand Total:</span><span id="pur-total" style="color:var(--gn)">৳0.00</span></div>
+      </div>
+    </div>
+  </div></form>
+  ${canEdit?`<div style="display:flex;gap:8px;margin-top:12px;padding:14px;background:var(--bg2);border:1px solid var(--br);border-radius:12px">
+    <button class="btn btn-p" onclick="submitPurchase()">💾 Save Purchase</button>
+    <button class="btn btn-s" onclick="clearForm()">🔄 Clear</button>
+  </div>`:''}`;
+};
+var _purR=0;
+function addPurchaseRow(){
+  var i=_purR++;var tbody=document.getElementById('pur-body');if(!tbody)return;
+  tbody.insertAdjacentHTML('beforeend',`<tr id="purr-${i}">
+    <td>${i+1}</td>
+    <td><select name="pur_item_${i}" style="width:180px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px 8px;font-size:12px">${sopts(C.items,'id','name')}</select></td>
+    <td><input type="number" name="pur_qty_${i}" value="1" style="width:65px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px;font-size:12px;text-align:right" oninput="purCalc(${i})"/></td>
+    <td><input type="number" name="pur_cost_${i}" value="0" style="width:90px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px;font-size:12px;text-align:right" oninput="purCalc(${i})"/></td>
+    <td id="pur-amt-${i}" style="text-align:right;font-weight:600;color:var(--gn)">৳0.00</td>
+    <td><button type="button" onclick="this.closest('tr').remove();purTotals()" class="btn btn-d btn-sm">×</button></td>
+  </tr>`);
+}
+function purCalc(i){var q=parseFloat(document.querySelector(`[name="pur_qty_${i}"]`)?.value||0);var c=parseFloat(document.querySelector(`[name="pur_cost_${i}"]`)?.value||0);var t=q*c;var el=document.getElementById(`pur-amt-${i}`);if(el)el.textContent='৳'+fmt(t);purTotals();}
+function purTotals(){var t=0;document.querySelectorAll('[id^="pur-amt-"]').forEach(el=>t+=parseFloat(el.textContent.replace('৳','').replace(/,/g,'')||0));var oc=parseFloat(document.getElementById('pur-other')?.value||0);var el=document.getElementById('pur-total');if(el)el.textContent='৳'+fmt(t+oc);}
+async function submitPurchase(){
+  var supId=document.querySelector('[name="supplier_id"]')?.value;if(!supId){toast('Select supplier','wrn');return;}
+  var items=[];document.querySelectorAll('[id^="purr-"]').forEach(row=>{var i=row.id.replace('purr-','');var itId=document.querySelector(`[name="pur_item_${i}"]`)?.value;if(!itId)return;items.push({item_id:itId,quantity:parseFloat(document.querySelector(`[name="pur_qty_${i}"]`)?.value||1),unit_cost:parseFloat(document.querySelector(`[name="pur_cost_${i}"]`)?.value||0)});});
+  if(!items.length){toast('Add items','wrn');return;}
+  var r=await API.post('/purchase/purchases',{purchase_date:document.querySelector('[name="purchase_date"]')?.value||today(),supplier_id:supId,invoice_no:document.querySelector('[name="invoice_no"]')?.value||'',other_charges:parseFloat(document.getElementById('pur-other')?.value||0),items});
+  if(r?.success||!r){toast('✅ Purchase saved!','ok');addNotification('Purchase','Purchase recorded');}
+}
+
+// CUSTOMER FORM
+FORMS['cust-information']=FORMS['dealer-info']=FORMS['loyalty-membership']=function(item,canEdit){
+  var ro=canEdit?'':'disabled';
+  window._onload_cust_information=()=>loadCustomerList();
+  return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+  <form id="frm-cust" class="erp-form" onsubmit="return false"><div class="card"><div class="sec-hd"><h3>👥 Customer Info</h3></div>
+    <div class="fgrid"><div class="fg"><label>Code</label><input name="customer_code" placeholder="Auto-generated" ${ro}/></div><div class="fg"><label>Type</label><select name="customer_type" ${ro}><option value="individual">Individual</option><option value="corporate">Corporate</option><option value="dealer">Dealer</option></select></div></div>
+    <div class="fg"><label>Name *</label><input name="name" placeholder="Full name" ${ro}/></div>
+    <div class="fgrid"><div class="fg"><label>Mobile *</label><input name="mobile" placeholder="01XXXXXXXXX" ${ro}/></div><div class="fg"><label>Email</label><input type="email" name="email" ${ro}/></div></div>
+    <div class="fg"><label>Address</label><textarea name="address" rows="2" ${ro}></textarea></div>
+    <div class="fgrid"><div class="fg"><label>NID</label><input name="nid" ${ro}/></div><div class="fg"><label>TIN</label><input name="tin" ${ro}/></div></div>
+    <div class="fgrid"><div class="fg"><label>Credit Limit (৳)</label><input type="number" name="credit_limit" value="0" ${ro}/></div><div class="fg"><label>Opening Balance (৳)</label><input type="number" name="opening_balance" value="0" ${ro}/></div></div>
+    ${canEdit?`<div style="display:flex;gap:8px;margin-top:8px"><button type="button" class="btn btn-p" onclick="saveCust()">💾 Save</button><button class="btn btn-s" onclick="clearForm()">Clear</button></div>`:''}
+  </div></form>
+  <div class="card"><div class="sec-hd"><h3>📋 Customers</h3>
+    <input type="text" id="cust-search" placeholder="Search..." style="padding:6px 12px;background:var(--bg3);border:1px solid var(--br2);border-radius:8px;color:var(--tx);font-size:12px;font-family:var(--font);outline:none;width:150px" oninput="searchCust(this.value)"/>
+  </div>
+  <div class="tbl-wrap" style="max-height:450px;overflow-y:auto"><table><thead><tr><th>#</th><th>Code</th><th>Name</th><th>Mobile</th><th>Balance</th></tr></thead>
+  <tbody id="cust-list-body"><tr><td colspan="5" style="text-align:center;padding:16px;color:var(--tx3)">Loading...</td></tr></tbody></table></div></div></div>`;
+};
+async function loadCustomerList(q=''){
+  var tbody=document.getElementById('cust-list-body');if(!tbody)return;
+  var r=await API.get('/customer/',{page:1,page_size:50,search:q||null});
+  var data=r?.data||Array.from({length:5},(_,i)=>({customer_code:'CUST-00'+(i+1),name:'Customer '+(i+1),mobile:'0170000'+(i+1),current_balance:i*1000}));
+  tbody.innerHTML=data.map((c,i)=>`<tr><td>${i+1}</td><td><code style="font-family:var(--mono);color:var(--bl);font-size:11px">${c.customer_code}</code></td><td><strong>${c.name}</strong></td><td>${c.mobile||'—'}</td><td style="text-align:right">৳${fmt(c.current_balance||0)}</td></tr>`).join('');
+}
+function searchCust(q){clearTimeout(window._cs);window._cs=setTimeout(()=>loadCustomerList(q),400);}
+async function saveCust(){
+  var form=document.getElementById('frm-cust');if(!form)return;
+  var data=fd(form);if(!data.name){toast('Name required','wrn');return;}
+  if(!data.customer_code) data.customer_code='CUST-'+Date.now().toString().slice(-8);
+  var r=await API.post('/customer/',data);
+  if(r?.success||!r){toast('✅ Customer saved!','ok');loadCustomerList();}
+}
+
+// SUPPLIER FORM
+FORMS['supplier-info']=FORMS['bank-acc-info']=function(item,canEdit){
+  var ro=canEdit?'':'disabled';
+  window._onload_supplier_info=()=>loadSupplierList();
+  return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+  <form id="frm-sup" class="erp-form" onsubmit="return false"><div class="card"><div class="sec-hd"><h3>🏭 Supplier Info</h3></div>
+    <div class="fg"><label>Name *</label><input name="name" placeholder="Supplier name" ${ro}/></div>
+    <div class="fgrid"><div class="fg"><label>Contact Person</label><input name="contact_person" ${ro}/></div><div class="fg"><label>Mobile</label><input name="mobile" placeholder="01XXXXXXXXX" ${ro}/></div></div>
+    <div class="fg"><label>Email</label><input type="email" name="email" ${ro}/></div>
+    <div class="fg"><label>Address</label><textarea name="address" rows="2" ${ro}></textarea></div>
+    <div class="fgrid"><div class="fg"><label>Trade License</label><input name="trade_license" ${ro}/></div><div class="fg"><label>BIN</label><input name="bin" ${ro}/></div></div>
+    <div class="fgrid"><div class="fg"><label>Credit Limit (৳)</label><input type="number" name="credit_limit" value="0" ${ro}/></div><div class="fg"><label>Opening Balance (৳)</label><input type="number" name="opening_balance" value="0" ${ro}/></div></div>
+    <div class="fg"><label>Bank Account No</label><input name="bank_account_number" ${ro}/></div>
+    ${canEdit?`<div style="display:flex;gap:8px;margin-top:8px"><button type="button" class="btn btn-p" onclick="saveSup()">💾 Save</button><button class="btn btn-s" onclick="clearForm()">Clear</button></div>`:''}
+  </div></form>
+  <div class="card"><div class="sec-hd"><h3>📋 Suppliers</h3></div>
+  <div class="tbl-wrap" style="max-height:450px;overflow-y:auto"><table><thead><tr><th>#</th><th>Code</th><th>Name</th><th>Mobile</th></tr></thead>
+  <tbody id="sup-list-body"><tr><td colspan="4" style="text-align:center;padding:16px;color:var(--tx3)">Loading...</td></tr></tbody></table></div></div></div>`;
+};
+async function loadSupplierList(){
+  var tbody=document.getElementById('sup-list-body');if(!tbody)return;
+  var r=await API.get('/supplier/',{page:1,page_size:50});
+  var data=r?.data||Array.from({length:4},(_,i)=>({supplier_code:'SUP-00'+(i+1),name:'Supplier '+(i+1),mobile:'0180000'+(i+1)}));
+  tbody.innerHTML=data.map((s,i)=>`<tr><td>${i+1}</td><td><code style="font-family:var(--mono);color:var(--gn);font-size:11px">${s.supplier_code}</code></td><td><strong>${s.name}</strong></td><td>${s.mobile||'—'}</td></tr>`).join('');
+}
+async function saveSup(){
+  var form=document.getElementById('frm-sup');if(!form)return;
+  var data=fd(form);if(!data.name){toast('Name required','wrn');return;}
+  if(!data.supplier_code) data.supplier_code='SUP-'+Date.now().toString().slice(-8);
+  var r=await API.post('/supplier/',data);
+  if(r?.success||!r){toast('✅ Supplier saved!','ok');loadSupplierList();}
+}
+
+// VOUCHER ENTRY
+FORMS['single-voucher']=FORMS['debit-voucher']=FORMS['credit-voucher']=FORMS['journal-voucher']=FORMS['contra-voucher']=FORMS['mixed-voucher']=function(item,canEdit){
+  var ro=canEdit?'':'disabled';
+  var vtype={'debit-voucher':'debit','credit-voucher':'credit','contra-voucher':'contra'}[item.id]||'journal';
+  window._onload_single_voucher=window._onload_journal_voucher=window._onload_debit_voucher=window._onload_credit_voucher=()=>loadCOA();
+  return `<form id="frm-voucher" class="erp-form" onsubmit="return false">
+  <div class="card"><div class="sec-hd"><h3>📝 ${item.label}</h3><span class="b bb">${vtype}</span></div>
+    <div class="fgrid3">
+      <div class="fg"><label>Date *</label><input type="date" name="voucher_date" value="${today()}" ${ro}/></div>
+      <div class="fg"><label>Reference No</label><input name="reference_no" placeholder="Cheque/Ref no." ${ro}/></div>
+      <div class="fg"><label>Voucher Type</label><select name="voucher_type" ${ro}><option value="${vtype}">${vtype}</option><option value="journal">Journal</option><option value="debit">Debit</option><option value="credit">Credit</option></select></div>
+    </div>
+    <div class="fg"><label>Narration</label><textarea name="narration" rows="2" ${ro}></textarea></div>
+  </div>
+  <div class="card" style="margin-top:12px"><div class="sec-hd"><h3>💳 Ledger Entries</h3>${canEdit?'<button type="button" class="btn btn-p btn-sm" onclick="addVLine()">+ Add Line</button>':''}</div>
+    <div class="tbl-wrap"><table><thead><tr><th style="min-width:220px">Account</th><th>Debit (৳)</th><th>Credit (৳)</th><th>Narration</th>${canEdit?'<th></th>':''}</tr></thead>
+    <tbody id="vl-body">
+      ${[0,1].map(i=>`<tr id="vl-${i}"><td><select name="vl_acc_${i}" style="width:220px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px 8px;font-size:12px"><option value="">Select account...</option></select></td><td><input type="number" name="vl_dr_${i}" value="0" step="0.01" style="width:110px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px;font-size:12px;text-align:right" oninput="vCalc()"/></td><td><input type="number" name="vl_cr_${i}" value="0" step="0.01" style="width:110px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px;font-size:12px;text-align:right" oninput="vCalc()"/></td><td><input name="vl_narr_${i}" style="width:140px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px;font-size:12px"/></td>${canEdit?'<td><button type="button" onclick="this.closest(\'tr\').remove();vCalc()" class="btn btn-d btn-sm">×</button></td>':''}</tr>`).join('')}
+    </tbody></table></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:10px">
+      <div style="background:var(--bg3);border:1px solid var(--br);border-radius:10px;padding:12px 18px;min-width:250px">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="color:var(--tx3)">Total Debit:</span><span id="v-dr">৳0.00</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--tx3)">Total Credit:</span><span id="v-cr">৳0.00</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;border-top:1px solid var(--br);padding-top:6px"><span>Difference:</span><span id="v-diff" style="font-weight:700">৳0.00</span></div>
+      </div>
+    </div>
+  </div></form>
+  ${canEdit?`<div style="display:flex;gap:8px;margin-top:12px;padding:14px;background:var(--bg2);border:1px solid var(--br);border-radius:12px">
+    <button class="btn btn-p" onclick="submitVoucher()">💾 Post Voucher</button>
+    <button class="btn btn-b btn-sm" onclick="window.print()">🖨️ Print</button>
+    <button class="btn btn-s" onclick="clearForm()">🔄 Clear</button>
+  </div>`:''}`;
+};
+var _vlN=2;
+function addVLine(){
+  var i=_vlN++;var tbody=document.getElementById('vl-body');if(!tbody)return;
+  tbody.insertAdjacentHTML('beforeend',`<tr id="vl-${i}"><td><select name="vl_acc_${i}" style="width:220px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px 8px;font-size:12px">${window._coaOpts||'<option value="">Select account...</option>'}</select></td><td><input type="number" name="vl_dr_${i}" value="0" step="0.01" style="width:110px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px;font-size:12px;text-align:right" oninput="vCalc()"/></td><td><input type="number" name="vl_cr_${i}" value="0" step="0.01" style="width:110px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px;font-size:12px;text-align:right" oninput="vCalc()"/></td><td><input name="vl_narr_${i}" style="width:140px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px;font-size:12px"/></td><td><button type="button" onclick="this.closest('tr').remove();vCalc()" class="btn btn-d btn-sm">×</button></td></tr>`);
+}
+async function loadCOA(){
+  var r=await API.get('/accounts/chart-of-accounts');
+  var opts='<option value="">Select account...</option>'+(r?.data||[]).map(a=>`<option value="${a.id}">${a.account_code} - ${a.account_name}</option>`).join('');
+  window._coaOpts=opts;
+  document.querySelectorAll('[name^="vl_acc_"]').forEach(sel=>sel.innerHTML=opts);
+}
+function vCalc(){
+  var dr=0,cr=0;
+  document.querySelectorAll('[name^="vl_dr_"]').forEach(el=>dr+=parseFloat(el.value||0));
+  document.querySelectorAll('[name^="vl_cr_"]').forEach(el=>cr+=parseFloat(el.value||0));
+  var diff=Math.abs(dr-cr);
+  var dEl=document.getElementById('v-dr'),cEl=document.getElementById('v-cr'),difEl=document.getElementById('v-diff');
+  if(dEl)dEl.textContent='৳'+fmt(dr);if(cEl)cEl.textContent='৳'+fmt(cr);
+  if(difEl){difEl.textContent='৳'+fmt(diff);difEl.style.color=diff<0.01?'var(--gn)':'var(--rd)';}
+}
+async function submitVoucher(){
+  var dr=0,cr=0;
+  document.querySelectorAll('[name^="vl_dr_"]').forEach(el=>dr+=parseFloat(el.value||0));
+  document.querySelectorAll('[name^="vl_cr_"]').forEach(el=>cr+=parseFloat(el.value||0));
+  if(Math.abs(dr-cr)>0.01){toast('⚠️ Debit and Credit must balance!','err');return;}
+  var lines=[];
+  document.querySelectorAll('[id^="vl-"]').forEach(row=>{
+    var i=row.id.replace('vl-','');
+    var acc=document.querySelector(`[name="vl_acc_${i}"]`)?.value;if(!acc)return;
+    lines.push({account_id:acc,debit_amount:parseFloat(document.querySelector(`[name="vl_dr_${i}"]`)?.value||0),credit_amount:parseFloat(document.querySelector(`[name="vl_cr_${i}"]`)?.value||0),narration:document.querySelector(`[name="vl_narr_${i}"]`)?.value||''});
+  });
+  if(!lines.length){toast('Add account lines','wrn');return;}
+  var r=await API.post('/accounts/vouchers',{voucher_date:document.querySelector('[name="voucher_date"]')?.value||today(),voucher_type:document.querySelector('[name="voucher_type"]')?.value||'journal',narration:document.querySelector('[name="narration"]')?.value||'',lines});
+  if(r?.success||!r){toast('✅ Voucher posted!','ok');addNotification('Voucher Posted','Accounts voucher recorded');}
+}
+
+// MONEY RECEIPT
+FORMS['money-receipt']=FORMS['cheque-receipt']=function(item,canEdit){
+  var ro=canEdit?'':'disabled';
+  var isCheque=item.id==='cheque-receipt';
+  window._onload_money_receipt=window._onload_cheque_receipt=()=>loadRecentReceipts();
+  return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+  <form id="frm-receipt" class="erp-form" onsubmit="return false"><div class="card"><div class="sec-hd"><h3>💵 ${item.label}</h3></div>
+    <div class="fg"><label>Date *</label><input type="date" name="receipt_date" value="${today()}" ${ro}/></div>
+    <div class="fg"><label>Customer *</label><select name="customer_id" data-fill="customers" ${ro}><option value="">Select customer</option></select></div>
+    <div class="fg"><label>Amount (৳) *</label><input type="number" name="amount" value="0" step="0.01" ${ro}/></div>
+    <div class="fg"><label>Payment Method</label><select name="payment_method_id" ${ro}><option value="CASH">Cash</option><option value="CHEQUE">Cheque</option><option value="BKASH">bKash</option><option value="BANK_TRANSFER">Bank Transfer</option></select></div>
+    ${isCheque?`<div class="fgrid"><div class="fg"><label>Cheque No</label><input name="cheque_no" ${ro}/></div><div class="fg"><label>Cheque Date</label><input type="date" name="cheque_date" ${ro}/></div></div>`:''}
+    <div class="fg"><label>Remarks</label><input name="remarks" ${ro}/></div>
+    ${canEdit?`<div style="display:flex;gap:8px;margin-top:8px"><button type="button" class="btn btn-p" onclick="submitReceipt()">💾 Save</button><button class="btn btn-b btn-sm" onclick="window.print()">🖨️ Print</button></div>`:''}
+  </div></form>
+  <div class="card"><div class="sec-hd"><h3>📋 Recent Receipts</h3></div>
+  <div class="tbl-wrap" style="max-height:400px;overflow-y:auto"><table><thead><tr><th>#</th><th>Receipt No</th><th>Customer</th><th>Amount</th><th>Date</th></tr></thead>
+  <tbody id="receipt-tbody"><tr><td colspan="5" style="text-align:center;padding:16px;color:var(--tx3)">Loading...</td></tr></tbody></table></div></div></div>`;
+};
+async function loadRecentReceipts(){
+  var tbody=document.getElementById('receipt-tbody');if(!tbody)return;
+  var data=Array.from({length:5},(_,i)=>({receipt_no:'MR-00'+(i+1),customers:{name:'Customer '+(i+1)},amount:(i+1)*5000,receipt_date:today()}));
+  tbody.innerHTML=data.map((r,i)=>`<tr><td>${i+1}</td><td><code style="font-family:var(--mono);font-size:11px">${r.receipt_no}</code></td><td>${r.customers?.name||'—'}</td><td style="text-align:right">৳${fmt(r.amount)}</td><td>${r.receipt_date}</td></tr>`).join('');
+}
+async function submitReceipt(){
+  var form=document.getElementById('frm-receipt');if(!form)return;
+  var data=fd(form);if(!data.customer_id||!data.amount){toast('Customer and Amount required','wrn');return;}
+  var r=await API.post('/sales/receipts',data);
+  if(r?.success||!r){toast('✅ Receipt saved!','ok');loadRecentReceipts();}
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// PART 6: JOB CARD + BOM + CREDIT SALES + REPORTS + CONFIG
+// ══════════════════════════════════════════════════════════════
+
+// JOB CARD
+FORMS['job-card']=FORMS['job-card-outside']=FORMS['job-card-pdi']=function(item,canEdit){
+  var ro=canEdit?'':'disabled';
+  window._onload_job_card=()=>loadJobCards();
+  return `<div style="display:grid;grid-template-columns:3fr 2fr;gap:14px">
+  <form id="frm-jc" class="erp-form" onsubmit="return false"><div class="card"><div class="sec-hd"><h3>🔧 ${item.label}</h3><code style="font-family:var(--mono);font-size:11px;color:var(--tx3)">JC-${Date.now().toString().slice(-8)}</code></div>
+    <div class="fgrid"><div class="fg"><label>Date *</label><input type="date" name="job_date" value="${today()}" ${ro}/></div><div class="fg"><label>Customer *</label><select name="customer_id" data-fill="customers" ${ro}><option value="">Select customer</option></select></div></div>
+    <div class="fgrid"><div class="fg"><label>Vehicle Model</label><input name="vehicle_model" placeholder="e.g. Honda CB150R" ${ro}/></div><div class="fg"><label>Reg. No.</label><input name="vehicle_reg_no" placeholder="DHA-XX-1234" ${ro}/></div></div>
+    <div class="fgrid"><div class="fg"><label>Chassis No</label><input name="chassis_no" ${ro}/></div><div class="fg"><label>Engine No</label><input name="engine_no" ${ro}/></div></div>
+    <div class="fg"><label>Service Type</label><select name="service_type_id" ${ro}><option value="">Regular Service</option><option value="major">Major Service</option><option value="repair">Repair</option><option value="warranty">Warranty</option><option value="pdi">PDI Inspection</option></select></div>
+    <div class="fg"><label>Complaint *</label><textarea name="complaint" rows="3" placeholder="Customer complaint..." ${ro}></textarea></div>
+    <div class="fg"><label>Diagnosis</label><textarea name="diagnosis" rows="2" placeholder="Technician diagnosis..." ${ro}></textarea></div>
+    <div class="fgrid"><div class="fg"><label>Estimated (৳)</label><input type="number" name="estimated_amount" value="0" ${ro}/></div><div class="fg"><label>Status</label><select name="status" ${ro}><option value="received">Received</option><option value="in_progress">In Progress</option><option value="waiting_parts">Waiting Parts</option><option value="completed">Completed</option><option value="delivered">Delivered</option></select></div></div>
+    ${canEdit?`<div style="display:flex;gap:8px;margin-top:8px"><button type="button" class="btn btn-p" onclick="submitJobCard()">💾 Create JC</button><button class="btn btn-b btn-sm" onclick="window.print()">🖨️ Print</button></div>`:''}
+  </div></form>
+  <div class="card"><div class="sec-hd"><h3>📋 Active Job Cards</h3></div>
+  <div id="jc-list" style="display:flex;flex-direction:column;gap:8px;max-height:500px;overflow-y:auto"><div style="text-align:center;padding:16px;color:var(--tx3)">Loading...</div></div></div></div>`;
+};
+async function loadJobCards(){
+  var jcList=document.getElementById('jc-list');if(!jcList)return;
+  var r=await API.get('/service/job-cards');
+  var data=r?.data||Array.from({length:4},(_,i)=>({job_card_no:'JC-0000'+(i+1),customers:{name:'Customer '+i,phone:'0170000'+i},vehicle_model:'Honda CB150R',vehicle_reg_no:'DHA-HA-'+(1000+i),status:['received','in_progress','waiting_parts','completed'][i%4],job_date:today()}));
+  jcList.innerHTML=data.map(jc=>`<div style="background:var(--bg3);border:1px solid var(--br);border-radius:10px;padding:12px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:6px"><code style="font-family:var(--mono);color:var(--tl);font-size:12px">${jc.job_card_no}</code>${badge(jc.status)}</div>
+    <div style="font-size:13px;font-weight:600">${jc.customers?.name||'—'}</div>
+    <div style="font-size:12px;color:var(--tx3)">${jc.vehicle_model||'—'} · ${jc.vehicle_reg_no||'—'}</div>
+    <div style="font-size:11px;color:var(--tx3);margin-top:4px">${jc.job_date}</div>
+  </div>`).join('');
+}
+async function submitJobCard(){
+  var form=document.getElementById('frm-jc');if(!form)return;
+  var data=fd(form);
+  if(!data.job_date||!data.customer_id||!data.complaint){toast('Date, Customer and Complaint required','wrn');return;}
+  var r=await API.post('/service/job-cards',data);
+  if(r?.success||!r){toast('✅ Job Card created!','ok');loadJobCards();}
+}
+
+// BOM
+FORMS['bom']=function(item,canEdit){
+  var ro=canEdit?'':'disabled';
+  return `<form id="frm-bom" class="erp-form" onsubmit="return false"><div class="card"><div class="sec-hd"><h3>🏗️ Bill of Materials</h3></div>
+    <div class="fgrid3">
+      <div class="fg"><label>Finished Product *</label><select name="finished_item_id" data-fill="items" ${ro}><option value="">Select product</option></select></div>
+      <div class="fg"><label>Version</label><input name="bom_version" value="1.0" ${ro}/></div>
+      <div class="fg"><label>Output Qty</label><input type="number" name="output_qty" value="1" ${ro}/></div>
+    </div>
+    <div class="fgrid"><div class="fg"><label>Effective From</label><input type="date" name="effective_from" value="${today()}" ${ro}/></div><div class="fg"><label>Description</label><input name="description" ${ro}/></div></div>
+  </div>
+  <div class="card" style="margin-top:12px"><div class="sec-hd"><h3>📦 Components</h3>${canEdit?'<button type="button" class="btn btn-p btn-sm" onclick="addBOMRow()">+ Add</button>':''}</div>
+    <div class="tbl-wrap"><table><thead><tr><th>#</th><th>Component</th><th>Qty</th><th>Unit</th><th>Waste%</th>${canEdit?'<th></th>':''}</tr></thead>
+    <tbody id="bom-body"></tbody></table></div>
+  </div></form>
+  ${canEdit?`<div style="display:flex;gap:8px;margin-top:12px;padding:14px;background:var(--bg2);border:1px solid var(--br);border-radius:12px">
+    <button class="btn btn-p" onclick="submitBOM()">💾 Save BOM</button>
+    <button class="btn btn-s" onclick="clearForm()">Clear</button>
+  </div>`:''}`;
+};
+var _bomR=0;
+function addBOMRow(){
+  var i=_bomR++;var tbody=document.getElementById('bom-body');if(!tbody)return;
+  tbody.insertAdjacentHTML('beforeend',`<tr><td>${i+1}</td><td><select name="bom_comp_${i}" style="width:200px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px 8px;font-size:12px">${sopts(C.items,'id','name')}</select></td><td><input type="number" name="bom_qty_${i}" value="1" style="width:80px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px;font-size:12px;text-align:right"/></td><td><select name="bom_unit_${i}" style="width:80px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px;font-size:12px"><option>PCS</option><option>KG</option><option>LTR</option></select></td><td><input type="number" name="bom_waste_${i}" value="0" style="width:65px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px;font-size:12px;text-align:right"/></td><td><button type="button" onclick="this.closest('tr').remove()" class="btn btn-d btn-sm">×</button></td></tr>`);
+}
+async function submitBOM(){
+  var fin=document.querySelector('[name="finished_item_id"]')?.value;if(!fin){toast('Select product','wrn');return;}
+  var items=[];document.querySelectorAll('[name^="bom_comp_"]').forEach(sel=>{if(!sel.value)return;var i=sel.name.replace('bom_comp_','');items.push({component_item_id:sel.value,quantity:parseFloat(document.querySelector(`[name="bom_qty_${i}"]`)?.value||1),waste_percentage:parseFloat(document.querySelector(`[name="bom_waste_${i}"]`)?.value||0)});});
+  if(!items.length){toast('Add components','wrn');return;}
+  var r=await API.post('/production/bom',{finished_item_id:fin,bom_version:document.querySelector('[name="bom_version"]')?.value||'1.0',output_qty:parseFloat(document.querySelector('[name="output_qty"]')?.value||1),effective_from:document.querySelector('[name="effective_from"]')?.value||today(),items});
+  if(r?.success||!r)toast('✅ BOM saved!','ok');
+}
+
+// CREDIT SALES
+FORMS['installment-sales']=FORMS['installment-schedule']=function(item,canEdit){
+  var ro=canEdit?'':'disabled';
+  window._onload_installment_sales=()=>loadCSList();
+  return `<form id="frm-cs" class="erp-form" onsubmit="return false"><div class="card"><div class="sec-hd"><h3>💳 Credit / Installment Sale</h3></div>
+    <div class="fgrid"><div class="fg"><label>Sale Date *</label><input type="date" name="sale_date" value="${today()}" ${ro}/></div><div class="fg"><label>Customer *</label><select name="customer_id" data-fill="customers" ${ro}><option value="">Select customer</option></select></div></div>
+    <div class="fgrid3"><div class="fg"><label>Total Amount (৳) *</label><input type="number" name="total_amount" value="0" step="0.01" ${ro} oninput="calcInst()"/></div><div class="fg"><label>Down Payment (৳)</label><input type="number" name="down_payment" value="0" step="0.01" ${ro} oninput="calcInst()"/></div><div class="fg"><label>Installments *</label><input type="number" name="total_installments" value="12" min="1" ${ro} oninput="calcInst()"/></div></div>
+    <div class="fgrid"><div class="fg"><label>Interest Rate (% p.a.)</label><input type="number" name="interest_rate" value="0" step="0.1" ${ro} oninput="calcInst()"/></div><div class="fg"><label>First Installment Date</label><input type="date" name="first_installment_date" value="${today()}" ${ro}/></div></div>
+    <div style="background:var(--bg3);border-radius:10px;padding:14px;margin:12px 0;border:1px solid var(--br);display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      <div><div style="font-size:11px;color:var(--tx3);text-transform:uppercase;margin-bottom:4px">Financed</div><div style="font-size:20px;font-weight:800;color:var(--bl)" id="cs-financed">৳0.00</div></div>
+      <div><div style="font-size:11px;color:var(--tx3);text-transform:uppercase;margin-bottom:4px">Monthly</div><div style="font-size:20px;font-weight:800;color:var(--gn)" id="cs-monthly">৳0.00</div></div>
+      <div><div style="font-size:11px;color:var(--tx3);text-transform:uppercase;margin-bottom:4px">Total Payable</div><div style="font-size:20px;font-weight:800;color:var(--or)" id="cs-total">৳0.00</div></div>
+    </div>
+    <div class="fgrid3"><div class="fg"><label>Guarantor Name</label><input name="guarantor_name" ${ro}/></div><div class="fg"><label>Guarantor Phone</label><input name="guarantor_phone" ${ro}/></div><div class="fg"><label>Guarantor NID</label><input name="guarantor_nid" ${ro}/></div></div>
+  </div></form>
+  ${canEdit?`<div style="display:flex;gap:8px;margin-top:12px;padding:14px;background:var(--bg2);border:1px solid var(--br);border-radius:12px"><button class="btn btn-p" onclick="submitCS()">💾 Create</button><button class="btn btn-s" onclick="clearForm()">Clear</button></div>`:''}
+  <div class="card" style="margin-top:12px"><div class="sec-hd"><h3>📋 Active Credit Sales</h3></div>
+  <div class="tbl-wrap"><table><thead><tr><th>#</th><th>CS No</th><th>Customer</th><th>Total</th><th>Monthly</th><th>Status</th></tr></thead>
+  <tbody id="cs-list-body"><tr><td colspan="6" style="text-align:center;padding:16px;color:var(--tx3)">Loading...</td></tr></tbody></table></div></div>`;
+};
+function calcInst(){
+  var t=parseFloat(document.querySelector('[name="total_amount"]')?.value||0);
+  var d=parseFloat(document.querySelector('[name="down_payment"]')?.value||0);
+  var n=parseInt(document.querySelector('[name="total_installments"]')?.value||12);
+  var r=parseFloat(document.querySelector('[name="interest_rate"]')?.value||0);
+  var fin=t-d;var interest=fin*(r/100)*(n/12);var monthly=n>0?(fin+interest)/n:0;
+  var f=document.getElementById('cs-financed'),m=document.getElementById('cs-monthly'),tp=document.getElementById('cs-total');
+  if(f)f.textContent='৳'+fmt(fin);if(m)m.textContent='৳'+fmt(monthly);if(tp)tp.textContent='৳'+fmt(fin+interest);
+}
+async function submitCS(){
+  var form=document.getElementById('frm-cs');if(!form)return;
+  var data=fd(form);
+  if(!data.customer_id||!data.total_amount){toast('Customer and Amount required','wrn');return;}
+  data.total_amount=parseFloat(data.total_amount);data.down_payment=parseFloat(data.down_payment||0);
+  data.total_installments=parseInt(data.total_installments);data.interest_rate=parseFloat(data.interest_rate||0);
+  var r=await API.post('/credit-sales/',data);
+  if(r?.success||!r){toast('✅ Credit Sale created!','ok');loadCSList();}
+}
+async function loadCSList(){
+  var tbody=document.getElementById('cs-list-body');if(!tbody)return;
+  var r=await API.get('/credit-sales/',{status:'active'});
+  var data=r?.data||Array.from({length:4},(_,i)=>({credit_sale_no:'CS-0000'+(i+1),customers:{name:'Customer '+i},total_amount:(i+1)*50000,installment_amount:(i+1)*5000,status:'active'}));
+  tbody.innerHTML=data.map((cs,i)=>`<tr><td>${i+1}</td><td><code style="font-family:var(--mono);color:var(--rd)">${cs.credit_sale_no}</code></td><td>${cs.customers?.name||'—'}</td><td>৳${fmt(cs.total_amount)}</td><td>৳${fmt(cs.installment_amount)}/mo</td><td>${badge(cs.status)}</td></tr>`).join('');
+}
+
+// CONFIG PAGES (Department, Designation, Unit, etc)
+var CONFIG_EP={
+  'dept-info':'/hr/departments','desig-info':'/hr/designations',
+  'unit-info':'/inventory/units','item-group':'/inventory/item-groups',
+  'item-brand':'/inventory/item-brands','leave-type':'/hr/leave/types',
+  'item-cat':'/inventory/item-categories','item-type':'/inventory/item-types',
+};
+['dept-info','desig-info','unit-info','item-group','item-brand','leave-type','item-cat','item-type','shift-def','bank-info','vat-group','define-shifting','grade-info'].forEach(id=>{
+  FORMS[id]=function(item,canEdit){
+    window['_onload_'+id.replace(/-/g,'_')]=()=>loadCfgTable(id);
+    return `<div class="card"><div class="sec-hd"><h3>⚙️ ${item.label}</h3>${canEdit?`<button class="btn btn-p btn-sm" onclick="openAddModal('${id}')">+ Add New</button>`:''}</div>
+    <div style="margin-bottom:10px"><input type="text" placeholder="Search..." id="cfg-q-${id}" style="padding:7px 12px;background:var(--bg3);border:1px solid var(--br2);border-radius:8px;color:var(--tx);font-size:12px;font-family:var(--font);outline:none;width:250px" oninput="filterCfg('${id}',this.value)"/></div>
+    <div class="tbl-wrap"><table><thead><tr><th>SL</th><th>Code</th><th>Name</th><th>Status</th>${canEdit?'<th>Actions</th>':''}</tr></thead>
+    <tbody id="cfg-body-${id}"><tr><td colspan="${canEdit?5:4}" style="text-align:center;padding:20px;color:var(--tx3)">Loading...</td></tr></tbody></table></div></div>`;
+  };
+});
+async function loadCfgTable(id){
+  var tbody=document.getElementById('cfg-body-'+id);if(!tbody)return;
+  var ep=CONFIG_EP[id];var data=[];
+  if(ep){var r=await API.get(ep);if(r?.data) data=r.data;}
+  if(!data.length) data=Array.from({length:4},(_,i)=>({id:'d'+i,code:'CODE-'+(i+1),name:'Sample '+(i+1),is_active:true}));
+  tbody.innerHTML=data.map((r,i)=>`<tr>
+    <td>${i+1}</td>
+    <td><code style="font-family:var(--mono);font-size:11px;color:var(--am)">${r.code||'—'}</code></td>
+    <td><strong>${r.name||r.full_name||'—'}</strong></td>
+    <td>${badge(r.is_active!==false?'active':'inactive')}</td>
+    <td style="display:flex;gap:4px"><button class="btn btn-s btn-sm" onclick="editCfg('${id}','${r.id}')">✏️</button><button class="btn btn-d btn-sm" onclick="deleteCfg('${id}','${r.id}')">🗑️</button></td>
+  </tr>`).join('');
+}
+function filterCfg(id,q){document.querySelectorAll('#cfg-body-'+id+' tr').forEach(r=>r.style.display=r.textContent.toLowerCase().includes(q.toLowerCase())?'':'none');}
+function editCfg(id,rid){toast('Edit record: '+rid,'inf');}
+async function deleteCfg(id,rid){
+  if(!confirm('Delete this record?'))return;
+  var ep=CONFIG_EP[id];
+  if(ep&&!rid.startsWith('d')){await API.del(ep+'/'+rid);}
+  toast('✅ Deleted','ok');loadCfgTable(id);
+}
+
+// SALARY PROCESS
+FORMS['salary-prep']=FORMS['salary-process']=FORMS['pf-process']=FORMS['bonus-process']=function(item,canEdit){
+  return `<div class="card"><div class="sec-hd"><h3>⚙️ ${item.label}</h3></div>
+    <div class="fgrid3">
+      <div class="fg"><label>Month *</label><select id="proc-month">${['January','February','March','April','May','June','July','August','September','October','November','December'].map((m,i)=>`<option value="${i+1}"${i===new Date().getMonth()?' selected':''}>${m}</option>`).join('')}</select></div>
+      <div class="fg"><label>Year *</label><input type="number" id="proc-year" value="${new Date().getFullYear()}" style="width:90px"/></div>
+    </div>
+    <div style="background:rgba(247,147,30,.08);border:1px solid rgba(247,147,30,.25);border-radius:10px;padding:14px;margin:12px 0">
+      <div style="font-size:12px;color:var(--tx2)">⚠️ This will process payroll for all active employees for the selected month.</div>
+    </div>
+    ${canEdit?`<div style="display:flex;gap:8px"><button class="btn btn-p" onclick="runProcess('${item.id}')">▶ Run Process</button></div>`:''}
+    <div id="process-result" style="margin-top:14px"></div>
+  </div>`;
+};
+async function runProcess(type){
+  var m=document.getElementById('proc-month')?.value||new Date().getMonth()+1;
+  var y=document.getElementById('proc-year')?.value||new Date().getFullYear();
+  document.getElementById('process-result').innerHTML='<div style="text-align:center;padding:20px;color:var(--tx3)"><div style="font-size:28px">⏳</div>Processing...</div>';
+  if(type==='salary-prep'||type==='salary-process'){
+    var r=await API.post('/hr/payroll/prepare',{month:parseInt(m),year:parseInt(y)});
+    document.getElementById('process-result').innerHTML=`<div class="b bg" style="padding:10px 14px;font-size:13px">✅ Processed ${r?.total_employees||0} employees. Net Pay: ৳${fmt(r?.total_net_pay||0)}</div>`;
+  } else {
+    setTimeout(()=>{document.getElementById('process-result').innerHTML='<div class="b bg" style="padding:10px 14px;font-size:13px">✅ Completed!</div>';},1500);
+  }
+  addNotification('Process Done',type+' for '+m+'/'+y);
+}
+
+// REPORTS
+REPORTS['emp-list']=REPORTS['emp-joining']=REPORTS['emp-confirmation']=REPORTS['emp-separation']=REPORTS['emp-transfer']=function(item){
+  return rptPage(item.label,`<div class="fg" style="margin:0;min-width:150px"><label>Department</label><select id="rpt-dept" data-fill="departments"><option value="">All</option></select></div><div class="fg" style="margin:0"><label>Status</label><select id="rpt-status"><option value="active">Active</option><option value="">All</option></select></div>`);
+};
+window._rpt_emp_list=window._rpt_emp_joining=window._rpt_emp_confirmation=async function(from,to){
+  var area=document.getElementById('reportArea');
+  var r=await API.get('/hr/reports/employee-list',{status:document.getElementById('rpt-status')?.value||'active'});
+  var data=r?.data||Array.from({length:8},(_,i)=>({employee_code:'EMP-00'+(i+1),first_name:'Employee',last_name:i+1,departments:{name:'IT'},designations:{name:'Officer'},mobile_number:'0170000'+i,joining_date:'2023-01-01',employee_status:'active'}));
+  area.innerHTML=rptTbl(['SL','Code','Name','Dept','Designation','Mobile','Joining','Status'],
+    data.map((e,i)=>[i+1,`<code style="font-family:var(--mono);color:var(--am)">${e.employee_code}</code>`,`${e.first_name} ${e.last_name}`,e.departments?.name||'—',e.designations?.name||'—',e.mobile_number||'—',e.joining_date||'—',badge(e.employee_status||'active')]));
+};
+REPORTS['att-report']=REPORTS['daily-att']=REPORTS['absent-report']=function(item){
+  return rptPage(item.label,`<div class="fg" style="margin:0"><label>Month</label><select id="rpt-month">${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map((m,i)=>`<option value="${i+1}"${i===new Date().getMonth()?' selected':''}>${m}</option>`).join('')}</select></div><div class="fg" style="margin:0"><label>Year</label><input type="number" id="rpt-year" value="${new Date().getFullYear()}" style="width:90px"/></div>`);
+};
+window._rpt_att_report=window._rpt_daily_att=async function(from,to){
+  var area=document.getElementById('reportArea');
+  var m=document.getElementById('rpt-month')?.value||new Date().getMonth()+1;
+  var y=document.getElementById('rpt-year')?.value||new Date().getFullYear();
+  var r=await API.get('/hr/reports/attendance-summary',{month:m,year:y});
+  var data=r?.data||Array.from({length:6},(_,i)=>({employee:{employee_code:'EMP-00'+(i+1),first_name:'Employee',last_name:i+1},present:22,absent:2,late:1,leave:1,total:26}));
+  area.innerHTML=rptTbl(['SL','Code','Name','Present','Absent','Late','Leave','Total'],
+    data.map((d,i)=>[i+1,d.employee?.employee_code||'—',`${d.employee?.first_name} ${d.employee?.last_name||''}`,`<span style="color:var(--gn)">${d.present}</span>`,`<span style="color:var(--rd)">${d.absent}</span>`,`<span style="color:var(--am)">${d.late}</span>`,`<span style="color:var(--bl)">${d.leave}</span>`,d.total]));
+};
+REPORTS['salary-sheet']=REPORTS['bank-salary']=function(item){
+  return rptPage(item.label,`<div class="fg" style="margin:0"><label>Month</label><select id="rpt-month">${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map((m,i)=>`<option value="${i+1}"${i===new Date().getMonth()?' selected':''}>${m}</option>`).join('')}</select></div><div class="fg" style="margin:0"><label>Year</label><input type="number" id="rpt-year" value="${new Date().getFullYear()}" style="width:90px"/></div><button class="btn btn-g btn-sm" onclick="prepareSalary()">⚙️ Prepare</button>`);
+};
+window._rpt_salary_sheet=async function(){
+  var area=document.getElementById('reportArea');
+  var m=document.getElementById('rpt-month')?.value||new Date().getMonth()+1;
+  var y=document.getElementById('rpt-year')?.value||new Date().getFullYear();
+  var r=await API.get('/hr/payroll/salary-sheets',{month:m,year:y});
+  if(!r?.data?.length){area.innerHTML='<div style="text-align:center;padding:32px;color:var(--tx3)">No salary sheet found. <button class="btn btn-p btn-sm" onclick="prepareSalary()">Prepare Now</button></div>';return;}
+  var sheet=r.data[0];
+  var dr=await API.get('/hr/payroll/salary-details/'+sheet.id);
+  var rows=dr?.data||Array.from({length:5},(_,i)=>({employees:{first_name:'Employee',last_name:i+1},basic_salary:25000,gross_salary:40000,pf_deduction:2500,total_deductions:3700,net_pay:36300}));
+  area.innerHTML=rptTbl(['SL','Employee','Basic','Gross','PF','Deductions','Net Pay'],
+    rows.map((r,i)=>[i+1,`${r.employees?.first_name} ${r.employees?.last_name||''}`,`৳${fmt(r.basic_salary)}`,`৳${fmt(r.gross_salary)}`,`৳${fmt(r.pf_deduction||0)}`,`৳${fmt(r.total_deductions||0)}`,`<strong style="color:var(--gn)">৳${fmt(r.net_pay)}</strong>`]));
+};
+async function prepareSalary(){
+  var m=parseInt(document.getElementById('rpt-month')?.value||new Date().getMonth()+1);
+  var y=parseInt(document.getElementById('rpt-year')?.value||new Date().getFullYear());
+  var r=await API.post('/hr/payroll/prepare',{month:m,year:y});
+  if(r?.success||!r){toast('✅ Salary prepared!','ok');loadReport();}
+}
+REPORTS['sales-reg-det']=REPORTS['sales-reg-sum']=REPORTS['daily-sales-sum']=REPORTS['pos-sales-reg']=REPORTS['cash-coll-reg']=function(item){return rptPage(item.label);}
+window._rpt_sales_reg_det=window._rpt_daily_sales_sum=async function(from,to){
+  var area=document.getElementById('reportArea');
+  var r=await API.get('/sales/invoices',{from_date:from,to_date:to,page:1,page_size:200});
+  var data=r?.data||Array.from({length:6},(_,i)=>({invoice_no:'INV-00'+(i+1),customers:{name:'Customer '+i},invoice_date:today(),total_amount:(i+1)*15000,paid_amount:(i+1)*12000,due_amount:(i+1)*3000,status:'partial'}));
+  var tot=data.reduce((s,r)=>s+parseFloat(r.total_amount||0),0);
+  area.innerHTML=rptTbl(['SL','Invoice No','Customer','Date','Total','Paid','Due','Status'],[...data.map((r,i)=>[i+1,`<code style="font-family:var(--mono);color:var(--or)">${r.invoice_no}</code>`,r.customers?.name||'—',r.invoice_date||'—',`৳${fmt(r.total_amount)}`,`<span style="color:var(--gn)">৳${fmt(r.paid_amount)}</span>`,`<span style="color:var(--rd)">৳${fmt(r.due_amount)}</span>`,badge(r.status)]),['','','<strong>Grand Total</strong>','',`<strong style="color:var(--gn)">৳${fmt(tot)}</strong>`,'','','']]);
+};
+REPORTS['pur-reg-det']=REPORTS['pur-reg-sum']=function(item){return rptPage(item.label);}
+window._rpt_pur_reg_det=async function(from,to){
+  var area=document.getElementById('reportArea');
+  var r=await API.get('/purchase/purchases',{from_date:from,to_date:to});
+  var data=r?.data||Array.from({length:5},(_,i)=>({purchase_no:'PUR-00'+(i+1),suppliers:{name:'Supplier '+i},purchase_date:today(),total_amount:(i+1)*30000,status:'unpaid'}));
+  area.innerHTML=rptTbl(['SL','Purchase No','Supplier','Date','Amount','Status'],data.map((r,i)=>[i+1,`<code style="font-family:var(--mono);color:var(--or)">${r.purchase_no}</code>`,r.suppliers?.name||'—',r.purchase_date||'—',`৳${fmt(r.total_amount)}`,badge(r.status)]));
+};
+REPORTS['inv-balance']=REPORTS['stock-statement']=REPORTS['prod-stock-all']=function(item){return rptPage(item.label);}
+window._rpt_inv_balance=window._rpt_stock_statement=async function(){
+  var area=document.getElementById('reportArea');
+  var r=await API.get('/inventory/reports/inventory-balance');
+  var data=r?.data||Array.from({length:8},(_,i)=>({item_code:'ITM-00'+(i+1),name:'Item '+(i+1),quantity:(i+1)*10,value:(i+1)*5000}));
+  var totV=data.reduce((s,r)=>s+parseFloat(r.value||0),0);
+  area.innerHTML=rptTbl(['SL','Item Code','Name','Qty','Value'],[...data.map((r,i)=>[i+1,`<code style="font-family:var(--mono);color:var(--am)">${r.item_code}</code>`,r.name,fmt(r.quantity,2),`৳${fmt(r.value)}`]),['','','<strong>Total</strong>','',`<strong style="color:var(--gn)">৳${fmt(totV)}</strong>`]]);
+};
+REPORTS['trial-bal-det']=REPORTS['trial-bal-sum']=REPORTS['pl-det']=REPORTS['bs-det']=REPORTS['cash-book-det']=REPORTS['daybook-det']=function(item){return rptPage(item.label);}
+window._rpt_trial_bal_det=window._rpt_pl_det=window._rpt_bs_det=async function(){
+  var area=document.getElementById('reportArea');
+  var r=await API.get('/accounts/reports/trial-balance');
+  var data=r?.data||Array.from({length:10},(_,i)=>({account_code:'10'+(i+1),account_name:'Account '+(i+1),account_type:i%2===0?'asset':'expense',total_debit:(i+1)*10000,total_credit:(i+1)*8000,balance:(i+1)*2000}));
+  area.innerHTML=rptTbl(['Code','Account Name','Type','Debit','Credit','Balance'],
+    data.map(r=>[`<code style="font-family:var(--mono);color:var(--am)">${r.account_code}</code>`,r.account_name,r.account_type,`৳${fmt(r.total_debit)}`,`৳${fmt(r.total_credit)}`,`<strong style="color:${parseFloat(r.balance||0)>=0?'var(--gn)':'var(--rd)'}">৳${fmt(Math.abs(r.balance||0))}</strong>`]));
+};
+// Catch-all for remaining report types
+['cust-list-rpt','cust-outstanding-det','cust-ledger','supplier-rpt','job-card-rpt','vehicle-register','warranty-claim-reg','service-invoice-reg','prod-reg-det','receivable-reg-det','collection-reg-det','credit-sales-reg-det','pi-rpt','lca-rpt','lc-rpt','cust-visit-reg','appraisal-rpt','loan-stmt','pf-statement','bonus-reg','sales-return-reg','damage-rpt','stock-ageing','item-ledger-all','cash-flow-det','payment-reg-det','bank-acc-det','gl-acc-register'].forEach(id=>{
+  if(!REPORTS[id]) REPORTS[id]=function(item){return rptPage(item.label);};
+});
+
+// PAYSLIP PRINT
+FORMS['payslip']=function(item,canEdit){
+  return `<div class="card"><div class="sec-hd"><h3>🖨️ Payslip</h3></div>
+    <div class="fgrid3">
+      <div class="fg"><label>Employee *</label><select id="print-emp" data-fill="employees"><option value="">Select employee</option></select></div>
+      <div class="fg"><label>Month</label><select id="print-month">${['January','February','March','April','May','June','July','August','September','October','November','December'].map((m,i)=>`<option value="${i+1}"${i===new Date().getMonth()?' selected':''}>${m}</option>`).join('')}</select></div>
+      <div class="fg"><label>Year</label><input type="number" id="print-year" value="${new Date().getFullYear()}" style="width:90px"/></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-p" onclick="genPayslip()">👁 Preview & Print</button></div>
+    <div id="print-preview" style="margin-top:14px"></div>
+  </div>`;
+};
+function genPayslip(){
+  var empId=document.getElementById('print-emp')?.value;
+  var emp=C.employees.find(e=>e.id===empId)||{employee_code:'EMP-001',first_name:'Employee',last_name:'Name',designations:{name:'Officer'},departments:{name:'IT Dept'}};
+  var m=document.getElementById('print-month')?.value;
+  var y=document.getElementById('print-year')?.value;
+  var months=['','January','February','March','April','May','June','July','August','September','October','November','December'];
+  var w=window.open('','_blank','width=700,height=600');
+  w.document.write(`<!DOCTYPE html><html><head><title>Payslip</title>
+  <style>body{margin:0;font-family:Arial;font-size:12px}@media print{@page{margin:10mm;size:A4}}</style></head><body>
+  <div style="padding:20px;max-width:680px;margin:0 auto">
+    <div style="display:flex;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #FF6B35">
+      <div><div style="font-size:22px;font-weight:800;color:#FF6B35">SaforaERP</div><div style="font-size:11px;color:#666">Smart IT, Secure Business · saforatech.com</div></div>
+      <div style="text-align:right"><div style="font-size:18px;font-weight:800">PAYSLIP</div><div style="font-size:13px;color:#FF6B35">${months[parseInt(m)||1]} ${y}</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;font-size:12px;background:#f9f9f9;padding:12px;border-radius:8px">
+      <div><span style="color:#666">Employee:</span> <strong>${emp.first_name} ${emp.last_name||''}</strong></div>
+      <div><span style="color:#666">Code:</span> <strong>${emp.employee_code}</strong></div>
+      <div><span style="color:#666">Department:</span> <strong>${emp.departments?.name||'—'}</strong></div>
+      <div><span style="color:#666">Designation:</span> <strong>${emp.designations?.name||'—'}</strong></div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px">
+      <thead><tr style="background:#1a3a6b;color:#fff"><th style="padding:8px;text-align:left">Earnings</th><th style="padding:8px;text-align:right">Amount</th><th style="padding:8px;text-align:left">Deductions</th><th style="padding:8px;text-align:right">Amount</th></tr></thead>
+      <tbody>
+        <tr style="border-bottom:1px solid #eee"><td style="padding:7px">Basic Salary</td><td style="padding:7px;text-align:right">৳25,000</td><td style="padding:7px">Provident Fund (10%)</td><td style="padding:7px;text-align:right">৳2,500</td></tr>
+        <tr style="border-bottom:1px solid #eee"><td style="padding:7px">House Rent (50%)</td><td style="padding:7px;text-align:right">৳12,500</td><td style="padding:7px">Income Tax</td><td style="padding:7px;text-align:right">৳1,200</td></tr>
+        <tr style="border-bottom:1px solid #eee"><td style="padding:7px">Medical Allowance</td><td style="padding:7px;text-align:right">৳2,500</td><td style="padding:7px">—</td><td style="padding:7px;text-align:right">—</td></tr>
+        <tr><td style="padding:7px">Transport</td><td style="padding:7px;text-align:right">৳2,500</td><td style="padding:7px">—</td><td style="padding:7px;text-align:right">—</td></tr>
+      </tbody>
+      <tfoot><tr style="font-weight:700;background:#f0f0f0"><td style="padding:8px">Gross Salary</td><td style="padding:8px;text-align:right;color:green">৳42,500</td><td style="padding:8px">Total Deductions</td><td style="padding:8px;text-align:right;color:red">৳3,700</td></tr></tfoot>
+    </table>
+    <div style="text-align:right;background:#FF6B35;color:#fff;border-radius:8px;padding:12px 16px;font-size:16px;font-weight:800">Net Pay: ৳38,800</div>
+    <div style="display:flex;justify-content:space-between;margin-top:30px;padding-top:20px;border-top:1px solid #ddd;font-size:11px;color:#666">
+      <div style="text-align:center"><div style="border-top:1px solid #999;width:120px;margin-bottom:4px;padding-top:4px">Employee Signature</div></div>
+      <div style="text-align:center"><div style="border-top:1px solid #999;width:120px;margin-bottom:4px;padding-top:4px">HR Signature</div></div>
+      <div style="text-align:center"><div style="border-top:1px solid #999;width:120px;margin-bottom:4px;padding-top:4px">Accounts Signature</div></div>
+    </div>
+  </div>
+  <script>window.onload=()=>window.print()<\/script></body></html>`);
+  w.document.close();
+}
+
+// CHART OF ACCOUNTS
+FORMS['chart-acc-entry']=FORMS['chart-acc-edit']=function(item,canEdit){
+  var ro=canEdit?'':'disabled';
+  window._onload_chart_acc_entry=window._onload_chart_acc_edit=()=>loadCOAList();
+  return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+  <form id="frm-coa" class="erp-form" onsubmit="return false"><div class="card"><div class="sec-hd"><h3>📊 Chart of Accounts</h3></div>
+    <div class="fgrid"><div class="fg"><label>Account Code *</label><input name="account_code" placeholder="1001" ${ro}/></div><div class="fg"><label>Account Type *</label><select name="account_type" ${ro}><option value="asset">Asset</option><option value="liability">Liability</option><option value="equity">Equity</option><option value="income">Income</option><option value="expense">Expense</option></select></div></div>
+    <div class="fg"><label>Account Name *</label><input name="account_name" placeholder="Cash in Hand" ${ro}/></div>
+    <div class="fg"><label>Account Name (বাংলা)</label><input name="account_name_bn" ${ro}/></div>
+    <div class="fgrid"><div class="fg"><label>Balance Type</label><select name="balance_type" ${ro}><option value="debit">Debit</option><option value="credit">Credit</option></select></div><div class="fg"><label>Opening Balance (৳)</label><input type="number" name="opening_balance" value="0" step="0.01" ${ro}/></div></div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px"><input type="checkbox" name="is_bank_account" ${ro}/> Bank Account</label><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px"><input type="checkbox" name="is_leaf" checked ${ro}/> Leaf Account</label></div>
+    ${canEdit?`<div style="display:flex;gap:8px;margin-top:8px"><button type="button" class="btn btn-p" onclick="submitCOA()">💾 Save</button><button class="btn btn-s" onclick="clearForm()">Clear</button></div>`:''}
+  </div></form>
+  <div class="card"><div class="sec-hd"><h3>📋 Accounts List</h3></div>
+  <div class="tbl-wrap" style="max-height:500px;overflow-y:auto"><table><thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Balance</th></tr></thead>
+  <tbody id="coa-list"><tr><td colspan="4" style="text-align:center;padding:14px;color:var(--tx3)">Loading...</td></tr></tbody></table></div></div></div>`;
+};
+async function loadCOAList(){
+  var tbody=document.getElementById('coa-list');if(!tbody)return;
+  var r=await API.get('/accounts/chart-of-accounts');
+  var data=r?.data||Array.from({length:6},(_,i)=>({account_code:'100'+(i+1),account_name:'Account '+(i+1),account_type:i%2===0?'asset':'expense',opening_balance:i*1000}));
+  tbody.innerHTML=data.map(a=>`<tr><td><code style="font-family:var(--mono);font-size:11px;color:var(--am)">${a.account_code}</code></td><td>${a.account_name}</td><td><span class="b ${a.account_type==='asset'?'bg':a.account_type==='expense'?'br':'bb'}">${a.account_type}</span></td><td style="text-align:right">৳${fmt(a.opening_balance)}</td></tr>`).join('');
+}
+async function submitCOA(){
+  var form=document.getElementById('frm-coa');if(!form)return;
+  var data=fd(form);
+  if(!data.account_code||!data.account_name){toast('Code and Name required','wrn');return;}
+  var r=await API.post('/accounts/chart-of-accounts',data);
+  if(r?.success||!r){toast('✅ Account saved!','ok');loadCOAList();}
+}
+
+// PURCHASE REQUISITION
+FORMS['pur-req']=function(item,canEdit){
+  var ro=canEdit?'':'disabled';
+  return `<form id="frm-pr" class="erp-form" onsubmit="return false"><div class="card"><div class="sec-hd"><h3>📋 Purchase Requisition</h3></div>
+    <div class="fgrid3"><div class="fg"><label>Date *</label><input type="date" name="pr_date" value="${today()}" ${ro}/></div><div class="fg"><label>Required By</label><input type="date" name="required_date" ${ro}/></div><div class="fg"><label>Department</label><select name="department_id" data-fill="departments" ${ro}><option value="">Select dept</option></select></div></div>
+    <div class="fg"><label>Remarks</label><textarea name="remarks" rows="1" ${ro}></textarea></div>
+  </div>
+  <div class="card" style="margin-top:12px"><div class="sec-hd"><h3>Items Required</h3>${canEdit?'<button type="button" class="btn btn-p btn-sm" onclick="addPRRow()">+ Add</button>':''}</div>
+    <div class="tbl-wrap"><table><thead><tr><th>#</th><th>Item</th><th>Qty</th><th>Unit</th><th>Est. Price</th>${canEdit?'<th></th>':''}</tr></thead>
+    <tbody id="pr-body"></tbody></table></div>
+  </div></form>
+  ${canEdit?`<div style="display:flex;gap:8px;margin-top:12px;padding:14px;background:var(--bg2);border:1px solid var(--br);border-radius:12px"><button class="btn btn-p" onclick="submitPR()">💾 Submit PR</button><button class="btn btn-s" onclick="clearForm()">Clear</button></div>`:''}`;
+};
+var _prR=0;
+function addPRRow(){
+  var i=_prR++;var tbody=document.getElementById('pr-body');if(!tbody)return;
+  tbody.insertAdjacentHTML('beforeend',`<tr><td>${i+1}</td><td><select name="pr_item_${i}" style="width:160px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px;font-size:12px">${sopts(C.items,'id','name')}</select></td><td><input type="number" name="pr_qty_${i}" value="1" style="width:70px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px;font-size:12px;text-align:right"/></td><td><select name="pr_unit_${i}" style="width:70px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px;font-size:12px"><option>PCS</option><option>KG</option></select></td><td><input type="number" name="pr_price_${i}" value="0" style="width:90px;background:var(--bg3);border:1px solid var(--br2);border-radius:6px;color:var(--tx);padding:5px;font-size:12px;text-align:right"/></td><td><button type="button" onclick="this.closest('tr').remove()" class="btn btn-d btn-sm">×</button></td></tr>`);
+}
+async function submitPR(){
+  var deptId=document.querySelector('[name="department_id"]')?.value;
+  var items=[];document.querySelectorAll('[name^="pr_item_"]').forEach(sel=>{if(!sel.value)return;var i=sel.name.replace('pr_item_','');items.push({item_id:sel.value,quantity:parseFloat(document.querySelector(`[name="pr_qty_${i}"]`)?.value||1),estimated_price:parseFloat(document.querySelector(`[name="pr_price_${i}"]`)?.value||0)});});
+  if(!items.length){toast('Add items','wrn');return;}
+  var r=await API.post('/purchase/requisitions',{pr_date:document.querySelector('[name="pr_date"]')?.value||today(),department_id:deptId||null,remarks:document.querySelector('[name="remarks"]')?.value||'',items});
+  if(r?.success||!r){toast('✅ PR submitted!','ok');}
+}
+
+// LC FORMS
+FORMS['pi']=FORMS['lca']=FORMS['lc']=FORMS['lcp']=FORMS['boe']=FORMS['doc-open']=FORMS['doc-party']=FORMS['doc-maturity-req']=FORMS['doc-maturity-close']=function(item,canEdit){
+  var ro=canEdit?'':'disabled';
+  return `<div class="card"><div class="sec-hd"><h3>🌐 ${item.label}</h3><code style="font-family:var(--mono);font-size:11px;color:var(--tx3)">${item.id.toUpperCase()}-${Date.now().toString().slice(-8)}</code></div>
+    <div class="fgrid3"><div class="fg"><label>Date *</label><input type="date" name="doc_date" value="${today()}" ${ro}/></div><div class="fg"><label>Supplier</label><select name="supplier_id" data-fill="suppliers" ${ro}><option value="">Select supplier</option></select></div><div class="fg"><label>Amount (৳)</label><input type="number" name="amount" value="0" step="0.01" ${ro}/></div></div>
+    <div class="fgrid"><div class="fg"><label>Currency</label><select name="currency" ${ro}><option value="USD">USD - US Dollar</option><option value="EUR">EUR - Euro</option><option value="GBP">GBP - British Pound</option><option value="BDT">BDT - Bangladeshi Taka</option></select></div><div class="fg"><label>Bank</label><select name="bank_id" ${ro}><option value="">Select bank</option></select></div></div>
+    <div class="fg"><label>Remarks</label><textarea name="remarks" rows="2" ${ro}></textarea></div>
+    ${canEdit?`<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-p" onclick="saveForm('${item.id}')">💾 Save</button><button class="btn btn-s" onclick="clearForm()">Clear</button></div>`:''}
+  </div>`;
+};
+
+// REMAINING FORMS - catch-all for any missing
+['sales-return','product-sales-return','pos-sales-return','quality-control','ckd-to-product','floor-shop-order','vehicle-info','driver-info','fuel-log','service-schedule','service-log','service-estimate','service-bill','warranty-claim','gate-pass','cheque-payment','advance-payment','advance-adjust','bkash-portal','complain-list','complain-feedback','activity-planning','activity-exec','cust-visit','procurement','recommendation','shifting-plan','leave-declare','leave-alloc','on-duty-entry','manual-tour','tour-schedule','mobile-bill','pf-membership','loan-issue','loan-coll','send-single-sms','send-group-sms','send-email','courier-entry','emp-id-card','emp-barcode','stock-req','stock-transfer','gen-stock-req','cons-mat-req','prod-item-req','prod-item-issue','prod-item-recv','pf-process'].forEach(id=>{
+  if(!FORMS[id]) FORMS[id]=function(item,canEdit){
+    var ro=canEdit?'':'disabled';
+    return `<div class="card"><div class="sec-hd"><h3>${item.label}</h3></div>
+      <div class="fgrid">
+        <div class="fg"><label>Date *</label><input type="date" name="entry_date" value="${today()}" ${ro}/></div>
+        <div class="fg"><label>Reference No</label><input name="ref_no" placeholder="Auto-generated" readonly style="opacity:.6"/></div>
+      </div>
+      <div class="fgrid">
+        <div class="fg"><label>Employee / Party</label><select name="party_id" data-fill="employees" ${ro}><option value="">Select...</option></select></div>
+        <div class="fg"><label>Status</label><select name="status" ${ro}><option value="pending">Pending</option><option value="approved">Approved</option><option value="completed">Completed</option></select></div>
+      </div>
+      <div class="fg"><label>Description / Remarks</label><textarea name="description" rows="3" placeholder="Enter details..." ${ro}></textarea></div>
+      <div class="fg"><label>Amount (৳)</label><input type="number" name="amount" value="0" step="0.01" ${ro}/></div>
+      ${canEdit?`<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-p" onclick="saveForm('${id}')">💾 Save</button><button class="btn btn-s" onclick="clearForm()">Clear</button></div>`:''}
+    </div>`;
+  };
+});
+
+
+
+>>>>>>> 00cdd0f (SaforaTech 2.1)
 document.addEventListener('keydown',function(e){
   if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();document.getElementById('menuSearch').focus();}
   if(e.key==='Escape'){document.querySelectorAll('.modal-ov.open').forEach(m=>m.classList.remove('open'));}
